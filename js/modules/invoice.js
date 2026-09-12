@@ -264,8 +264,8 @@ const InvoiceModule = (function () {
 
           '<div style="font-size:24px; margin-top:56px; margin-bottom:26px;">Thank you!</div>' +
 
-          '<div style="font-size:13px; line-height:1.8;">' +
-            '<div style="font-weight:700; letter-spacing:.3px; margin-bottom:6px;">PAYMENT INFORMATION</div>' +
+          '<div style="font-size:11.5px; line-height:1.7;">' +
+            '<div style="font-weight:700; letter-spacing:.3px; margin-bottom:6px; font-size:11.5px;">PAYMENT INFORMATION</div>' +
             escapeHtml(ci.bankName || "-") + "<br>" +
             "Account Name: " + escapeHtml(ci.accountName || "-") + "<br>" +
             "Account No.: " + escapeHtml(ci.accountNumber || "-") + "<br>" +
