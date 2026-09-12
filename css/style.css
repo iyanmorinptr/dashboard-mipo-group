@@ -545,6 +545,54 @@ tbody tr:hover { background: rgba(0,0,0,0.02); }
   font-size: 13px;
 }
 
+/* ---------- Calendar (Home) ---------- */
+.calendar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+  gap: 10px;
+}
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+.calendar-daylabels { margin-bottom: 6px; }
+.calendar-daylabel {
+  text-align: center;
+  font-size: 11px;
+  font-weight: 590;
+  color: var(--muted);
+  padding: 4px 0;
+}
+.calendar-day {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--ink);
+  transition: background .12s ease;
+}
+.calendar-day:hover { background: rgba(0,0,0,0.05); }
+.calendar-day.other-month { visibility: hidden; cursor: default; }
+.calendar-day.today { font-weight: 700; color: #8a6a34; }
+.calendar-day.selected { background: var(--gold); color: var(--white); }
+.calendar-day .dot {
+  position: absolute;
+  bottom: 5px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--gold);
+}
+.calendar-day.selected .dot { background: var(--white); }
+
 /* ---------- Toolbar ---------- */
 .toolbar {
   display: flex;

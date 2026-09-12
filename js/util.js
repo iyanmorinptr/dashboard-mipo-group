@@ -30,3 +30,19 @@ function escapeHtml(str) {
 function confirmAction(message) {
   return window.confirm(message);
 }
+
+function pricelistOptionsHtml() {
+  let html = '<option value="">— Pilih item dari pricelist —</option>';
+  PRICELIST.forEach(function (group) {
+    html += '<optgroup label="' + escapeHtml(group.category) + '">';
+    group.items.forEach(function (it) {
+      html +=
+        '<option value="' + escapeHtml(it.name) + "|" + it.price + '">' +
+        escapeHtml(it.name) + " — " + formatIDR(it.price) +
+        "</option>";
+    });
+    html += "</optgroup>";
+  });
+  html += '<option value="__custom__">Item kustom (ketik manual)</option>';
+  return html;
+}

@@ -32,7 +32,10 @@ function seedDB() {
         id: uid("sch"),
         date: todayISO(),
         client: "PT Sinar Abadi",
-        menu: "Nasi Box Premium, Snack Box, Coffee Break",
+        menuItems: [
+          { name: "Koneo Vanilla Based - 100 Portions", qty: 1 },
+          { name: "Warmiepo Indomie (per pax)", qty: 100 },
+        ],
         departureTime: "06:30",
         standbyTime: "08:00",
         staff: "Rangga, Dewi",
@@ -75,7 +78,26 @@ function migrateDB(db) {
     if (inv.clientVenue === undefined) inv.clientVenue = "";
     if (inv.dpPercent === undefined) inv.dpPercent = 50;
   });
+  db.schedules.forEach(function (s) {
+    // Data lama menyimpan menu sebagai satu string bebas ("menu"); versi
+    // baru menyimpan rincian item terpilih dari pricelist ("menuItems").
+    if (!s.menuItems) {
+      s.menuItems = s.menu ? [{ name: s.menu, qty: 1 }] : [];
+    }
+  });
   return db;
+}
+
+function scheduleMenuText(s) {
+  if (s.menuItems && s.menuItems.length) {
+    return s.menuItems
+      .map(function (mi) {
+        const qty = Number(mi.qty) || 1;
+        return mi.name + (qty > 1 ? " x" + qty : "");
+      })
+      .join(", ");
+  }
+  return s.menu || "-";
 }
 
 /* ---------- Firestore-backed data store ---------- */
