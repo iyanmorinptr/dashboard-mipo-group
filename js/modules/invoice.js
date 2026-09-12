@@ -3,6 +3,8 @@
    Pembuatan invoice & rekapan. Saat invoice ditandai LUNAS,
    otomatis tercatat sebagai pemasukan di Finance (dengan
    referensi nomor invoice, nama client & nama transaksi).
+   Invoice juga bisa ditampilkan sebagai kartu cetak (desain
+   Mipo Group) dan diunduh/dibagikan sebagai gambar PNG.
    =========================================================== */
 
 const InvoiceModule = (function () {
@@ -80,7 +82,16 @@ const InvoiceModule = (function () {
     }
 
     function formHtml(existing) {
-      const inv = existing || { number: nextInvoiceNumber(), client: "", transaction: "", date: todayISO(), items: [{ desc: "", qty: 1, price: 0 }] };
+      const inv = existing || {
+        number: nextInvoiceNumber(),
+        client: "",
+        clientPhone: "",
+        clientVenue: "",
+        transaction: "",
+        date: todayISO(),
+        dpPercent: 50,
+        items: [{ desc: "", qty: 1, price: 0 }],
+      };
       const itemsHtml = inv.items.map(function (it, idx) { return itemRowHtml(it, idx); }).join("");
       return (
         "<h3>" + (existing ? "Edit Invoice" : "Buat Invoice Baru") + "</h3>" +
@@ -90,7 +101,10 @@ const InvoiceModule = (function () {
         '<div class="form-field"><label>Nomor Invoice</label><input type="text" name="number" value="' + escapeHtml(inv.number) + '" required></div>' +
         '<div class="form-field"><label>Tanggal</label><input type="date" name="date" value="' + escapeHtml(inv.date) + '" required></div>' +
         '<div class="form-field"><label>Nama Client</label><input type="text" name="client" value="' + escapeHtml(inv.client) + '" required></div>' +
+        '<div class="form-field"><label>No. Telepon Client</label><input type="text" name="clientPhone" value="' + escapeHtml(inv.clientPhone) + '" placeholder="mis. 0812xxxxxxx"></div>' +
+        '<div class="form-field"><label>Lokasi / Venue</label><input type="text" name="clientVenue" value="' + escapeHtml(inv.clientVenue) + '"></div>' +
         '<div class="form-field"><label>Nama Transaksi</label><input type="text" name="transaction" value="' + escapeHtml(inv.transaction) + '" required></div>' +
+        '<div class="form-field"><label>DP (%)</label><input type="number" min="0" max="100" name="dpPercent" value="' + escapeHtml(inv.dpPercent) + '"></div>' +
         "</div>" +
         '<div style="margin-top:18px;"><label class="sans" style="display:block; font-size:11px; letter-spacing:1px; text-transform:uppercase; color:var(--muted); margin-bottom:9px;">Rincian Item</label>' +
         '<div id="itemsWrap">' + itemsHtml + "</div>" +
@@ -137,7 +151,16 @@ const InvoiceModule = (function () {
             if (desc) items.push({ desc: desc, qty: Number(qty) || 0, price: Number(price) || 0 });
           });
 
-          const payload = { number: obj.number, date: obj.date, client: obj.client, transaction: obj.transaction, items: items };
+          const payload = {
+            number: obj.number,
+            date: obj.date,
+            client: obj.client,
+            clientPhone: obj.clientPhone || "",
+            clientVenue: obj.clientVenue || "",
+            transaction: obj.transaction,
+            dpPercent: obj.dpPercent === "" ? 0 : Number(obj.dpPercent),
+            items: items,
+          };
 
           if (existing) {
             Object.assign(existing, payload);
@@ -151,25 +174,161 @@ const InvoiceModule = (function () {
       });
     }
 
-    function viewInvoice(inv) {
-      const total = invoiceTotal(inv);
+    /* ---------- Kartu invoice bergaya cetak (untuk dilihat & diekspor PNG) ---------- */
+    function invoiceCardHtml(inv) {
+      const subtotal = invoiceTotal(inv);
+      const dpPercent = inv.dpPercent || 0;
+      const dpAmount = Math.round((subtotal * dpPercent) / 100);
+      const ci = db.companyInfo || {};
+
       const rows = inv.items
         .map(function (it) {
+          const lineTotal = (Number(it.qty) || 0) * (Number(it.price) || 0);
           return (
-            "<tr><td>" + escapeHtml(it.desc) + "</td><td>" + it.qty + "</td><td>" + formatIDR(it.price) + "</td><td>" + formatIDR(it.qty * it.price) + "</td></tr>"
+            '<tr>' +
+            '<td style="padding:14px 0; text-align:left;">' + escapeHtml(it.desc) + "</td>" +
+            '<td style="padding:14px 0; text-align:center;">' + escapeHtml(it.qty) + "</td>" +
+            '<td style="padding:14px 0; text-align:right;">' + formatNumberID(it.price) + "</td>" +
+            '<td style="padding:14px 0; text-align:right;">' + formatNumberID(lineTotal) + "</td>" +
+            "</tr>"
           );
         })
         .join("");
+
+      return (
+        '<div id="invoiceCardCapture" style="background:#e9e8e6; color:#111; width:640px; max-width:100%; padding:56px 48px 48px; font-family:-apple-system,BlinkMacSystemFont,\'SF Pro Text\',\'Helvetica Neue\',Arial,sans-serif; box-sizing:border-box;">' +
+          '<div style="display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:34px;">' +
+            '<svg viewBox="0 0 200 200" style="width:70px; height:70px; flex-shrink:0;"><path d="M42,162 L42,40 L100,104 L158,40 L158,138 C158,152 148,160 135,157" fill="none" stroke="#111" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
+            '<div style="font-size:40px; font-weight:800; letter-spacing:-0.01em;">INVOICE</div>' +
+          "</div>" +
+
+          '<div style="display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:26px; gap:20px;">' +
+            '<div>' +
+              '<div style="font-weight:700; font-size:13px; letter-spacing:.3px; margin-bottom:8px;">BILLED TO:</div>' +
+              '<div style="font-size:14px; line-height:1.7;">' +
+                escapeHtml(inv.client || "-") + "<br>" +
+                (inv.clientPhone ? escapeHtml(inv.clientPhone) + "<br>" : "") +
+                (inv.clientVenue ? escapeHtml(inv.clientVenue) : "") +
+              "</div>" +
+            "</div>" +
+            '<div style="text-align:right; font-size:14px; line-height:1.7; white-space:nowrap;">' +
+              "Invoice No. " + escapeHtml(inv.number) + "<br>" +
+              formatInvoiceDate(inv.date) +
+            "</div>" +
+          "</div>" +
+
+          '<table style="width:100%; border-collapse:collapse; font-size:14px;">' +
+            '<thead><tr style="border-bottom:1.5px solid #111;">' +
+              '<th style="padding:10px 0; text-align:left; font-weight:700;">Item</th>' +
+              '<th style="padding:10px 0; text-align:center; font-weight:700;">Quantity</th>' +
+              '<th style="padding:10px 0; text-align:right; font-weight:700;">Unit Price</th>' +
+              '<th style="padding:10px 0; text-align:right; font-weight:700;">Total</th>' +
+            "</tr></thead>" +
+            '<tbody style="border-top:none;">' + rows.replace(/<tr>/g, '<tr style="border-bottom:1px solid #999;">') + "</tbody>" +
+          "</table>" +
+
+          '<div style="display:flex; justify-content:flex-end; margin-top:6px;">' +
+            '<table style="border-collapse:collapse; font-size:14px; min-width:220px;">' +
+              '<tr style="border-top:1.5px solid #111;"><td style="padding:12px 20px 12px 0; font-weight:700;">Subtotal</td><td style="padding:12px 0; text-align:right;">' + formatNumberID(subtotal) + "</td></tr>" +
+              '<tr style="border-top:1.5px solid #111;"><td style="padding:12px 20px 0 0; font-weight:800; font-size:16px;">Dp ' + dpPercent + '%</td><td style="padding:12px 0 0; text-align:right; font-weight:800; font-size:20px;">' + formatNumberID(dpAmount) + "</td></tr>" +
+            "</table>" +
+          "</div>" +
+
+          '<div style="font-size:24px; margin-top:56px; margin-bottom:26px;">Thank you!</div>' +
+
+          '<div style="font-size:13px; line-height:1.8;">' +
+            '<div style="font-weight:700; letter-spacing:.3px; margin-bottom:6px;">PAYMENT INFORMATION</div>' +
+            escapeHtml(ci.bankName || "-") + "<br>" +
+            "Account Name: " + escapeHtml(ci.accountName || "-") + "<br>" +
+            "Account No.: " + escapeHtml(ci.accountNumber || "-") + "<br>" +
+            escapeHtml(ci.paymentNote || "") +
+          "</div>" +
+
+          '<div style="text-align:center; margin-top:70px;">' +
+            '<div style="font-weight:800; font-size:20px; letter-spacing:1px;">MIPO</div>' +
+            '<div style="font-size:10px; letter-spacing:4px; color:#8a8a8a; margin-top:2px;">GROUP</div>' +
+          "</div>" +
+        "</div>"
+      );
+    }
+
+    function getExportFilename(inv) {
+      return "Invoice-" + String(inv.number).replace(/[^a-zA-Z0-9]+/g, "-") + ".png";
+    }
+
+    function captureCardToBlob() {
+      const el = document.getElementById("invoiceCardCapture");
+      if (!el || typeof html2canvas !== "function") return Promise.reject(new Error("html2canvas tidak tersedia"));
+      return html2canvas(el, { scale: 2, backgroundColor: "#e9e8e6", useCORS: true }).then(function (canvas) {
+        return new Promise(function (resolve, reject) {
+          canvas.toBlob(function (blob) {
+            if (blob) resolve(blob);
+            else reject(new Error("Gagal membuat gambar"));
+          }, "image/png");
+        });
+      });
+    }
+
+    function downloadBlob(blob, filename) {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(function () { URL.revokeObjectURL(url); }, 4000);
+    }
+
+    function viewInvoice(inv) {
       openModal(
-        "<h3>" + escapeHtml(inv.number) + "</h3>" +
-        '<p class="modal-sub">' + escapeHtml(inv.client) + " &mdash; " + escapeHtml(inv.transaction) + " &mdash; " + formatDate(inv.date) + "</p>" +
-        '<div class="table-wrap"><table><thead><tr><th>Item</th><th>Qty</th><th>Harga</th><th>Subtotal</th></tr></thead><tbody>' +
-        rows +
-        '</tbody></table></div>' +
-        '<div style="text-align:right; margin-top:14px; font-size:18px;">Total: <strong>' + formatIDR(total) + "</strong></div>" +
-        '<div class="modal-actions"><button type="button" class="btn btn-ghost btn-sm" id="closeViewBtn">Tutup</button></div>',
+        '<div style="max-height:70vh; overflow:auto; margin:-30px -32px 0; padding:24px;">' + invoiceCardHtml(inv) + "</div>" +
+        '<div class="modal-actions" style="margin-top:18px;">' +
+          '<button type="button" class="btn btn-ghost btn-sm" id="closeViewBtn">Tutup</button>' +
+          '<button type="button" class="btn btn-outline btn-sm" id="downloadPngBtn">Unduh PNG</button>' +
+          '<button type="button" class="btn btn-sm" style="width:auto;" id="shareWaBtn">Bagikan ke WhatsApp</button>' +
+        "</div>",
         function (modalEl) {
+          modalEl.querySelector(".modal").style.maxWidth = "720px";
           modalEl.querySelector("#closeViewBtn").addEventListener("click", closeModal);
+
+          const downloadBtn = modalEl.querySelector("#downloadPngBtn");
+          const shareBtn = modalEl.querySelector("#shareWaBtn");
+
+          downloadBtn.addEventListener("click", function () {
+            downloadBtn.textContent = "Memproses...";
+            captureCardToBlob()
+              .then(function (blob) {
+                downloadBlob(blob, getExportFilename(inv));
+                downloadBtn.textContent = "Unduh PNG";
+              })
+              .catch(function () {
+                downloadBtn.textContent = "Unduh PNG";
+                window.alert("Gagal membuat gambar invoice. Coba lagi.");
+              });
+          });
+
+          shareBtn.addEventListener("click", function () {
+            shareBtn.textContent = "Memproses...";
+            captureCardToBlob()
+              .then(function (blob) {
+                const filename = getExportFilename(inv);
+                const file = new File([blob], filename, { type: "image/png" });
+                if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                  navigator
+                    .share({ files: [file], title: "Invoice " + inv.number, text: "Invoice " + inv.number + " - " + inv.client })
+                    .catch(function () { /* dibatalkan pengguna, tidak perlu ditindaklanjuti */ });
+                } else {
+                  downloadBlob(blob, filename);
+                  window.alert("Gambar invoice sudah diunduh. Buka file-nya lalu bagikan ke WhatsApp secara manual dari galeri/file kamu.");
+                }
+                shareBtn.textContent = "Bagikan ke WhatsApp";
+              })
+              .catch(function () {
+                shareBtn.textContent = "Bagikan ke WhatsApp";
+                window.alert("Gagal membuat gambar invoice. Coba lagi.");
+              });
+          });
         }
       );
     }

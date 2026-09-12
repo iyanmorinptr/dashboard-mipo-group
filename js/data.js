@@ -83,8 +83,11 @@ function seedDB() {
         id: uid("inv"),
         number: "INV/2026/09/001",
         client: "PT Sinar Abadi",
+        clientPhone: "021-5551234",
+        clientVenue: "Ballroom Hotel Mulia, Jakarta",
         transaction: "Layanan Catering Acara Korporat",
         date: todayISO(),
+        dpPercent: 50,
         items: [
           { desc: "Nasi Box Premium (200 pax)", qty: 200, price: 45000 },
           { desc: "Coffee Break", qty: 200, price: 15000 },
@@ -138,7 +141,32 @@ function seedDB() {
         notes: "Pajak tahunan STNK",
       },
     ],
+    companyInfo: {
+      bankName: "Nama Bank",
+      accountName: "Nama Pemilik Rekening",
+      accountNumber: "0000000000",
+      paymentNote: "Please make payment 7 days before the day",
+    },
   };
+}
+
+function migrateDB(db) {
+  // Menambahkan field baru pada data lama yang tersimpan di browser
+  // supaya versi dashboard yang lebih baru tidak error.
+  if (!db.companyInfo) {
+    db.companyInfo = {
+      bankName: "Nama Bank",
+      accountName: "Nama Pemilik Rekening",
+      accountNumber: "0000000000",
+      paymentNote: "Please make payment 7 days before the day",
+    };
+  }
+  (db.invoices || []).forEach(function (inv) {
+    if (inv.clientPhone === undefined) inv.clientPhone = "";
+    if (inv.clientVenue === undefined) inv.clientVenue = "";
+    if (inv.dpPercent === undefined) inv.dpPercent = 50;
+  });
+  return db;
 }
 
 function loadDB() {
@@ -149,7 +177,7 @@ function loadDB() {
     return seeded;
   }
   try {
-    return JSON.parse(raw);
+    return migrateDB(JSON.parse(raw));
   } catch (e) {
     const seeded = seedDB();
     localStorage.setItem(DB_KEY, JSON.stringify(seeded));
@@ -190,6 +218,18 @@ function isAdmin() {
 function formatIDR(n) {
   const v = Number(n) || 0;
   return "Rp " + v.toLocaleString("id-ID");
+}
+
+function formatNumberID(n) {
+  const v = Number(n) || 0;
+  return v.toLocaleString("id-ID");
+}
+
+function formatInvoiceDate(iso) {
+  if (!iso) return "-";
+  const d = new Date(iso + "T00:00:00");
+  if (isNaN(d.getTime())) return iso;
+  return d.toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
 }
 
 function formatDate(iso) {

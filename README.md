@@ -47,10 +47,14 @@ saya jika ingin dilanjutkan ke tahap ini.
 2. **Finance** — kas perusahaan, pemasukan, pengeluaran, omset, profit.
 3. **Invoice** — pembuatan invoice & rekapan; saat invoice ditandai lunas,
    otomatis tercatat sebagai pemasukan di Finance (dengan referensi nomor
-   invoice, nama client, dan nama transaksi).
+   invoice, nama client, dan nama transaksi). Setiap invoice bisa dilihat
+   sebagai kartu bergaya cetak (desain Mipo Group) dan diunduh/dibagikan
+   sebagai gambar PNG langsung ke WhatsApp lewat tombol "Bagikan ke
+   WhatsApp" (memakai Web Share API bila didukung perangkat/browser;
+   kalau tidak, gambar diunduh lalu dibagikan manual).
 4. **Inventory** — peralatan & perlengkapan milik perusahaan.
 5. **Maintenance** — jadwal perawatan peralatan/perlengkapan & pembayaran
    pajak aset.
-6. **Settings** — profil akun & manajemen akun staff (khusus Administrator).
-
-Desain invoice cetak/PDF akan disesuaikan setelah desain final diberikan.
+6. **Settings** — profil akun, info pembayaran (rekening bank yang tampil
+   di invoice — diisi sendiri lewat menu ini, tidak ditulis di source
+   code), & manajemen akun staff (khusus Administrator).

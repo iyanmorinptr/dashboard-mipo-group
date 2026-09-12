@@ -74,6 +74,49 @@ const SettingsModule = (function () {
       });
     }
 
+    function companyInfoCard() {
+      const ci = db.companyInfo || {};
+      return (
+        '<div class="card" style="margin-bottom:26px; max-width:480px;">' +
+        '<div class="label sans" style="font-size:11px; letter-spacing:1.5px; text-transform:uppercase; color:var(--muted); margin-bottom:12px;">Info Pembayaran (tampil di Invoice)</div>' +
+        '<div style="font-size:14px; line-height:1.8; margin-bottom:16px;">' +
+          escapeHtml(ci.bankName || "-") + "<br>" +
+          "Account Name: " + escapeHtml(ci.accountName || "-") + "<br>" +
+          "Account No.: " + escapeHtml(ci.accountNumber || "-") + "<br>" +
+          '<span style="color:var(--muted); font-size:12.5px;">' + escapeHtml(ci.paymentNote || "") + "</span>" +
+        "</div>" +
+        '<button class="btn btn-outline btn-sm" style="width:auto;" id="editCompanyInfoBtn">Ubah Info Pembayaran</button>' +
+        "</div>"
+      );
+    }
+
+    function openCompanyInfoForm() {
+      const ci = db.companyInfo || {};
+      openModal(
+        "<h3>Info Pembayaran</h3>" +
+        '<p class="modal-sub">Informasi ini tampil di setiap invoice yang dibuat. Tersimpan di browser ini saja, tidak masuk ke source code.</p>' +
+        '<form id="companyInfoForm"><div class="form-grid">' +
+        '<div class="form-field full"><label>Nama Bank</label><input type="text" name="bankName" value="' + escapeHtml(ci.bankName || "") + '" required></div>' +
+        '<div class="form-field full"><label>Nama Pemilik Rekening</label><input type="text" name="accountName" value="' + escapeHtml(ci.accountName || "") + '" required></div>' +
+        '<div class="form-field full"><label>Nomor Rekening</label><input type="text" name="accountNumber" value="' + escapeHtml(ci.accountNumber || "") + '" required></div>' +
+        '<div class="form-field full"><label>Catatan Pembayaran</label><input type="text" name="paymentNote" value="' + escapeHtml(ci.paymentNote || "") + '"></div>' +
+        "</div>" +
+        '<div class="modal-actions"><button type="button" class="btn btn-ghost btn-sm" id="cancelBtn">Batal</button><button type="submit" class="btn btn-sm" style="width:auto;">Simpan</button></div>' +
+        "</form>",
+        function (modalEl) {
+          modalEl.querySelector("#cancelBtn").addEventListener("click", closeModal);
+          modalEl.querySelector("#companyInfoForm").addEventListener("submit", function (e) {
+            e.preventDefault();
+            const data = Object.fromEntries(new FormData(e.target).entries());
+            db.companyInfo = data;
+            saveDB(db);
+            closeModal();
+            renderAll();
+          });
+        }
+      );
+    }
+
     function myProfileCard() {
       const me = db.users.find((u) => u.id === ctx.session.id);
       if (!me) return "";
@@ -114,6 +157,7 @@ const SettingsModule = (function () {
       let html = myProfileCard();
 
       if (isAdminUser) {
+        html += companyInfoCard();
         html +=
           '<div class="section-heading"><div><h2>Manajemen Akun Staff</h2><div class="sub">Kelola siapa saja yang dapat mengakses dashboard</div></div>' +
           '<button class="btn btn-sm" style="width:auto;" id="addUserBtn">+ Tambah Staff</button>' +
@@ -127,6 +171,9 @@ const SettingsModule = (function () {
 
       const pwBtn = container.querySelector("#changePwBtn");
       if (pwBtn) pwBtn.addEventListener("click", openChangePassword);
+
+      const editCompanyInfoBtn = container.querySelector("#editCompanyInfoBtn");
+      if (editCompanyInfoBtn) editCompanyInfoBtn.addEventListener("click", openCompanyInfoForm);
 
       const addUserBtn = container.querySelector("#addUserBtn");
       if (addUserBtn) addUserBtn.addEventListener("click", function () { openUserForm(null); });
