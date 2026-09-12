@@ -94,6 +94,14 @@
       a.className = "nav-item";
       a.dataset.key = r.key;
       a.innerHTML = '<span class="nav-icon">' + ICONS[r.key] + '</span><span>' + r.label + '</span>';
+      // Pindah menu TIDAK menambah riwayat browser (history) — supaya gestur
+      // "swipe kembali" di trackpad/HP tidak tiba-tiba melompat ke menu lain.
+      a.addEventListener("click", function (e) {
+        e.preventDefault();
+        if (currentRouteKey() === r.key) return;
+        history.replaceState(null, "", "#" + r.key);
+        render();
+      });
       sidebarNav.appendChild(a);
     });
 
