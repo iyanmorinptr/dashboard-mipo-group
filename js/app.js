@@ -126,22 +126,49 @@
     render();
   }
 
-  Promise.all([whenDBReady(), getInitialAuthUser()]).then(function (results) {
-    const user = results[1];
-    if (!user) {
-      window.location.href = "index.html";
-      return;
-    }
-    const activeSession = buildSessionFromAuthUser(user);
-    if (!activeSession) {
-      // Login Firebase valid, tapi akunnya tidak/tidak lagi terdaftar sebagai staff.
-      auth.signOut().then(function () {
-        window.location.href = "index.html";
-      });
-      return;
-    }
-    startApp(activeSession);
+  function showFatalError(message) {
+    loadingOverlay.innerHTML =
+      '<div style="max-width:360px; text-align:center; padding:24px;">' +
+      '<div style="font-weight:700; margin-bottom:10px;">Gagal memuat dashboard</div>' +
+      '<div style="margin-bottom:18px;">' + escapeHtml(message) + "</div>" +
+      '<button id="reloadBtn" style="border:1px solid #1d1d1f; background:#1d1d1f; color:#fff; border-radius:980px; padding:10px 20px; cursor:pointer;">Muat Ulang</button>' +
+      "</div>";
+    loadingOverlay.style.display = "flex";
+    const reloadBtn = document.getElementById("reloadBtn");
+    if (reloadBtn) reloadBtn.addEventListener("click", function () { window.location.reload(); });
+  }
+
+  window.addEventListener("error", function (e) {
+    if (!appStarted) showFatalError((e && e.message) || "Terjadi kesalahan tak terduga.");
   });
+  window.addEventListener("unhandledrejection", function (e) {
+    if (!appStarted) {
+      const reason = e && e.reason;
+      showFatalError((reason && (reason.message || String(reason))) || "Terjadi kesalahan tak terduga.");
+    }
+  });
+
+  Promise.all([whenDBReady(), getInitialAuthUser()])
+    .then(function (results) {
+      const user = results[1];
+      if (!user) {
+        window.location.href = "index.html";
+        return;
+      }
+      const activeSession = buildSessionFromAuthUser(user);
+      if (!activeSession) {
+        // Login Firebase valid, tapi akunnya tidak/tidak lagi terdaftar sebagai staff.
+        auth.signOut().then(function () {
+          window.location.href = "index.html";
+        });
+        return;
+      }
+      startApp(activeSession);
+    })
+    .catch(function (err) {
+      console.error(err);
+      showFatalError((err && err.message) || "Terjadi kesalahan tak terduga.");
+    });
 
   // Kalau sesi login berakhir (logout dari tab lain, dsb) saat aplikasi sudah berjalan.
   auth.onAuthStateChanged(function (user) {
