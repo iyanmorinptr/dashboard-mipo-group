@@ -383,7 +383,7 @@ button, input, select, textarea {
 .hamburger span {
   display: block;
   height: 2px;
-  background: var(--ink);
+  background: #000000;
   border-radius: 2px;
 }
 
