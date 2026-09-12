@@ -236,7 +236,11 @@ const InvoiceModule = (function () {
         .join("");
 
       return (
-        '<div id="invoiceCardCapture" style="background:#e9e8e6; color:#111; width:640px; max-width:100%; min-width:0; padding:56px 48px 48px; font-family:-apple-system,BlinkMacSystemFont,\'SF Pro Text\',\'Helvetica Neue\',Arial,sans-serif; box-sizing:border-box; overflow-wrap:break-word;">' +
+        // Ukuran A4 tegak (210mm x 297mm) pada 96px/inch = 794 x 1123px.
+        // Lebar/tinggi ini tetap (bukan max-width:100%) supaya hasil ekspor
+        // PNG selalu berproporsi A4 yang benar; di layar sempit kartu ini
+        // bisa digeser (lihat #invoiceModalScroll) alih-alih mengecil.
+        '<div id="invoiceCardCapture" style="background:#e9e8e6; color:#111; width:794px; min-height:1123px; padding:64px 56px 48px; font-family:-apple-system,BlinkMacSystemFont,\'SF Pro Text\',\'Helvetica Neue\',Arial,sans-serif; box-sizing:border-box; overflow-wrap:break-word; display:flex; flex-direction:column; flex-shrink:0;">' +
           '<div style="display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:34px;">' +
             '<svg viewBox="0 0 300 300" style="width:70px; height:70px; flex-shrink:0;"><path d="M75,237 L75,67.5 L150,156 L225,67.5 L225,216 C225,230 232,237 246,237" fill="none" stroke="#111" stroke-width="15" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
             '<div style="font-size:40px; font-weight:800; letter-spacing:-0.01em;">INVOICE</div>' +
@@ -284,7 +288,9 @@ const InvoiceModule = (function () {
             escapeHtml(ci.paymentNote || "") +
           "</div>" +
 
-          '<div style="text-align:center; margin-top:70px;">' +
+          '<div style="flex:1; min-height:40px;"></div>' +
+
+          '<div style="text-align:center; margin-top:auto; padding-top:24px;">' +
             '<div style="font-weight:800; font-size:20px; letter-spacing:1px;">MIPO</div>' +
             '<div style="font-size:10px; letter-spacing:4px; color:#8a8a8a; margin-top:2px;">GROUP</div>' +
           "</div>" +
@@ -322,7 +328,7 @@ const InvoiceModule = (function () {
 
     function viewInvoice(inv) {
       openModal(
-        '<div id="invoiceModalScroll" style="border-radius:22px 22px 0 0; display:flex; justify-content:center; background:#e9e8e6;">' + invoiceCardHtml(inv) + "</div>" +
+        '<div id="invoiceModalScroll" style="border-radius:22px 22px 0 0; display:flex; justify-content:center; background:#e9e8e6; overflow-x:auto; -webkit-overflow-scrolling:touch;">' + invoiceCardHtml(inv) + "</div>" +
         '<div class="modal-actions" style="padding:18px 28px 24px; margin:0; border-top:1px solid var(--border); background:var(--white); flex-wrap:wrap;">' +
           '<button type="button" class="btn btn-ghost btn-sm" id="closeViewBtn">Tutup</button>' +
           '<button type="button" class="btn btn-outline btn-sm" id="downloadPngBtn">Unduh PNG</button>' +
@@ -330,7 +336,7 @@ const InvoiceModule = (function () {
         "</div>",
         function (modalEl) {
           const modalBox = modalEl.querySelector(".modal");
-          modalBox.style.maxWidth = "720px";
+          modalBox.style.maxWidth = "860px";
           modalBox.style.padding = "0";
           modalBox.style.overflow = "hidden";
           modalEl.scrollTop = 0;
