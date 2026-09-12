@@ -375,7 +375,7 @@ button, input, select, textarea {
 }
 
 .hamburger {
-  display: none;
+  display: flex;
   flex-direction: column;
   gap: 4px;
   width: 30px;
@@ -647,11 +647,16 @@ tbody tr:hover { background: rgba(0,0,0,0.02); }
   .grid-3 { grid-template-columns: repeat(2, 1fr); }
 }
 
+@media (min-width: 861px) {
+  /* Di layar lebar, hamburger membuka/menutup (collapse) sidebar tanpa overlay gelap */
+  .sidebar:not(.open) { transform: translateX(-100%); }
+  .sidebar:not(.open) ~ .main { margin-left: 0; }
+}
+
 @media (max-width: 860px) {
   .sidebar { transform: translateX(-100%); }
   .sidebar.open { transform: translateX(0); }
   .main { margin-left: 0; }
-  .hamburger { display: flex; }
   .overlay.show { display: block; }
   .form-grid { grid-template-columns: 1fr; }
 }

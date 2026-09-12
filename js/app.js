@@ -43,7 +43,8 @@
   let appStarted = false;
 
   function closeSidebar() {
-    sidebar.classList.remove("open");
+    // Di layar lebar sidebar tetap terbuka; ini hanya menutup overlay/drawer di HP.
+    if (window.innerWidth <= 860) sidebar.classList.remove("open");
     overlay.classList.remove("show");
   }
 
@@ -96,9 +97,22 @@
       sidebarNav.appendChild(a);
     });
 
+    function syncSidebarForWidth() {
+      // Di layar lebar (laptop) sidebar terbuka secara default; di layar
+      // sempit (HP) sidebar tertutup secara default dan tampil sebagai overlay.
+      if (window.innerWidth > 860) {
+        sidebar.classList.add("open");
+        overlay.classList.remove("show");
+      } else {
+        sidebar.classList.remove("open");
+      }
+    }
+    syncSidebarForWidth();
+    window.addEventListener("resize", syncSidebarForWidth);
+
     hamburgerBtn.addEventListener("click", function () {
       sidebar.classList.toggle("open");
-      overlay.classList.toggle("show");
+      if (window.innerWidth <= 860) overlay.classList.toggle("show");
     });
     overlay.addEventListener("click", closeSidebar);
 
