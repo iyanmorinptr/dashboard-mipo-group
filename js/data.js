@@ -82,9 +82,10 @@ function migrateDB(db) {
 let _cachedDB = null;
 let _dbInitStarted = false;
 let _firstSnapshotHandled = false;
-let _dbReadyResolve;
-const _dbReadyPromise = new Promise(function (resolve) {
+let _dbReadyResolve, _dbReadyReject;
+const _dbReadyPromise = new Promise(function (resolve, reject) {
   _dbReadyResolve = resolve;
+  _dbReadyReject = reject;
 });
 
 function _dbRef() {
@@ -115,10 +116,13 @@ function initDB() {
       }
     },
     function (err) {
+      // PENTING: jangan pernah diam-diam lanjut dengan data kosong/seed di sini —
+      // itu yang menyebabkan data asli tertimpa data contoh saat penyimpanan
+      // berikutnya. Kegagalan harus gagal-total & terlihat, bukan sunyi.
       console.error("Gagal memuat data dashboard dari Firestore:", err);
       if (!_firstSnapshotHandled) {
         _firstSnapshotHandled = true;
-        _dbReadyResolve();
+        _dbReadyReject(err);
       }
     }
   );
@@ -130,10 +134,22 @@ function whenDBReady() {
 }
 
 function loadDB() {
-  return _cachedDB || seedDB();
+  if (!_cachedDB) {
+    throw new Error("Data belum siap dimuat dari server — jangan menyimpan perubahan dalam kondisi ini.");
+  }
+  return _cachedDB;
 }
 
 function saveDB(db) {
+  // Lapisan pengaman: tolak menyimpan objek yang tidak lengkap/rusak,
+  // supaya bug apa pun di kode tidak bisa menimpa data asli di Firestore.
+  const requiredArrays = ["users", "schedules", "finance", "invoices", "inventory", "maintenance"];
+  const looksValid = db && requiredArrays.every(function (key) { return Array.isArray(db[key]); });
+  if (!looksValid) {
+    console.error("saveDB dipanggil dengan data yang tidak valid, penyimpanan dibatalkan:", db);
+    window.alert("Terjadi kesalahan internal — perubahan TIDAK disimpan supaya data lama tidak hilang. Muat ulang halaman lalu coba lagi.");
+    return;
+  }
   _cachedDB = db;
   _dbRef()
     .set(db)
