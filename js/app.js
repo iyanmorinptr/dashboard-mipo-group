@@ -25,12 +25,12 @@
   };
 
   const ROUTES = [
-    { key: "schedule", label: "Schedule", title: "Schedule", subtitle: "Rancangan jadwal client secara detail", module: window.ScheduleModule },
-    { key: "finance", label: "Finance", title: "Finance", subtitle: "Kas, pemasukan, pengeluaran, omset & profit perusahaan", module: window.FinanceModule },
-    { key: "invoice", label: "Invoice", title: "Invoice", subtitle: "Pembuatan invoice & rekapan transaksi", module: window.InvoiceModule },
-    { key: "inventory", label: "Inventory", title: "Inventory", subtitle: "Peralatan & perlengkapan milik perusahaan", module: window.InventoryModule },
-    { key: "maintenance", label: "Maintenance", title: "Maintenance", subtitle: "Jadwal perawatan & pembayaran pajak aset", module: window.MaintenanceModule },
-    { key: "settings", label: "Settings", title: "Settings", subtitle: "Pengaturan akun & manajemen staff", module: window.SettingsModule },
+    { key: "schedule", label: "Schedule", title: "Schedule", subtitle: "Rancangan jadwal client secara detail", module: ScheduleModule },
+    { key: "finance", label: "Finance", title: "Finance", subtitle: "Kas, pemasukan, pengeluaran, omset & profit perusahaan", module: FinanceModule },
+    { key: "invoice", label: "Invoice", title: "Invoice", subtitle: "Pembuatan invoice & rekapan transaksi", module: InvoiceModule },
+    { key: "inventory", label: "Inventory", title: "Inventory", subtitle: "Peralatan & perlengkapan milik perusahaan", module: InventoryModule },
+    { key: "maintenance", label: "Maintenance", title: "Maintenance", subtitle: "Jadwal perawatan & pembayaran pajak aset", module: MaintenanceModule },
+    { key: "settings", label: "Settings", title: "Settings", subtitle: "Pengaturan akun & manajemen staff", module: SettingsModule },
   ];
 
   const sidebarNav = document.getElementById("sidebarNav");
