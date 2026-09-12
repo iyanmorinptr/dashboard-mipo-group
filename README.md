@@ -62,6 +62,8 @@ Console (Authentication → Users → Add user) untuk akun pertama.
    client, jam keberangkatan, jam standby di lokasi, staff in charge.
    Input & edit hanya untuk akun Administrator.
 2. **Finance** — kas perusahaan, pemasukan, pengeluaran, omset, profit.
+   Bisa mengunduh **Laporan Keuangan sebagai PDF** (ringkasan + rincian
+   transaksi) untuk periode tertentu atau seluruh periode.
 3. **Invoice** — pembuatan invoice & rekapan; saat invoice ditandai lunas,
    otomatis tercatat sebagai pemasukan di Finance (dengan referensi nomor
    invoice & nama client). Rincian item bisa dipilih langsung dari
