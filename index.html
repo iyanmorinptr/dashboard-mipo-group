@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Mipo Group Dashboard — Login</title>
-<link rel="stylesheet" href="css/style.css?v=6">
+<link rel="stylesheet" href="css/style.css?v=7">
 </head>
 <body class="login-page">
 
@@ -34,45 +34,53 @@
         <label for="password">Kata Sandi</label>
         <input type="password" id="password" name="password" placeholder="••••••••" required autocomplete="current-password">
       </div>
-      <button type="submit" class="btn">Masuk</button>
+      <button type="submit" class="btn" id="loginSubmitBtn">Masuk</button>
     </form>
 
     <p class="login-hint sans">
-      Akun demo — Admin: admin@mipogroup.com / admin123<br>
-      Staff: staff@mipogroup.com / staff123
+      Data tersinkron otomatis di semua perangkat. Hubungi Administrator
+      jika belum memiliki akun.
     </p>
   </div>
 
-<script src="js/data.js?v=6"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
+<script src="js/firebase-init.js?v=7"></script>
+<script src="js/data.js?v=7"></script>
 <script>
   (function () {
+    initDB();
+
     // sudah login? langsung arahkan ke dashboard
-    if (getSession()) {
-      window.location.href = "dashboard.html";
-      return;
-    }
+    getInitialAuthUser().then(function (user) {
+      if (user) window.location.href = "dashboard.html";
+    });
 
     const form = document.getElementById("loginForm");
     const errorBox = document.getElementById("loginError");
+    const submitBtn = document.getElementById("loginSubmitBtn");
 
     form.addEventListener("submit", function (e) {
       e.preventDefault();
-      const email = document.getElementById("email").value.trim().toLowerCase();
+      const email = document.getElementById("email").value.trim();
       const password = document.getElementById("password").value;
 
-      const db = loadDB();
-      const user = db.users.find(
-        (u) => u.email.toLowerCase() === email && u.password === password
-      );
+      errorBox.style.display = "none";
+      submitBtn.disabled = true;
+      submitBtn.textContent = "Memproses...";
 
-      if (!user) {
-        errorBox.textContent = "Email atau kata sandi salah. Silakan coba lagi.";
-        errorBox.style.display = "block";
-        return;
-      }
-
-      setSession(user);
-      window.location.href = "dashboard.html";
+      auth
+        .signInWithEmailAndPassword(email, password)
+        .then(function () {
+          window.location.href = "dashboard.html";
+        })
+        .catch(function (err) {
+          errorBox.textContent = mapAuthError(err);
+          errorBox.style.display = "block";
+          submitBtn.disabled = false;
+          submitBtn.textContent = "Masuk";
+        });
     });
   })();
 </script>

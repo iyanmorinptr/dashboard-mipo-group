@@ -3,12 +3,6 @@
    =========================================================== */
 
 (function () {
-  const session = getSession();
-  if (!session) {
-    window.location.href = "index.html";
-    return;
-  }
-
   const ICONS = {
     home:
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6"/></svg>',
@@ -43,37 +37,15 @@
   const sidebar = document.getElementById("sidebar");
   const overlay = document.getElementById("overlay");
   const hamburgerBtn = document.getElementById("hamburgerBtn");
+  const loadingOverlay = document.getElementById("loadingOverlay");
 
-  // user chip
-  document.getElementById("userAvatar").textContent = (session.name || "?").charAt(0).toUpperCase();
-  document.getElementById("userName").textContent = session.name;
-  document.getElementById("userRole").textContent = session.role === "admin" ? "Administrator" : "Staff";
-
-  document.getElementById("logoutBtn").addEventListener("click", function () {
-    clearSession();
-    window.location.href = "index.html";
-  });
-
-  // build nav
-  ROUTES.forEach(function (r) {
-    const a = document.createElement("a");
-    a.href = "#" + r.key;
-    a.className = "nav-item";
-    a.dataset.key = r.key;
-    a.innerHTML = '<span class="nav-icon">' + ICONS[r.key] + '</span><span>' + r.label + '</span>';
-    sidebarNav.appendChild(a);
-  });
+  let session = null;
+  let appStarted = false;
 
   function closeSidebar() {
     sidebar.classList.remove("open");
     overlay.classList.remove("show");
   }
-
-  hamburgerBtn.addEventListener("click", function () {
-    sidebar.classList.toggle("open");
-    overlay.classList.toggle("show");
-  });
-  overlay.addEventListener("click", closeSidebar);
 
   function currentRouteKey() {
     const hash = (window.location.hash || "#home").replace("#", "");
@@ -93,7 +65,7 @@
 
     contentEl.innerHTML = "";
     if (route.module && typeof route.module.render === "function") {
-      route.module.render(contentEl, { session, isAdmin: isAdmin() });
+      route.module.render(contentEl, { session: session, isAdmin: isAdmin() });
     } else {
       contentEl.innerHTML = '<div class="empty-state">Modul belum tersedia.</div>';
     }
@@ -102,7 +74,65 @@
     window.scrollTo(0, 0);
   }
 
-  window.addEventListener("hashchange", render);
-  window.addEventListener("DOMContentLoaded", render);
-  render();
+  function startApp(activeSession) {
+    session = activeSession;
+
+    document.getElementById("userAvatar").textContent = (session.name || "?").charAt(0).toUpperCase();
+    document.getElementById("userName").textContent = session.name;
+    document.getElementById("userRole").textContent = session.role === "admin" ? "Administrator" : "Staff";
+
+    document.getElementById("logoutBtn").addEventListener("click", function () {
+      clearSession().then(function () {
+        window.location.href = "index.html";
+      });
+    });
+
+    ROUTES.forEach(function (r) {
+      const a = document.createElement("a");
+      a.href = "#" + r.key;
+      a.className = "nav-item";
+      a.dataset.key = r.key;
+      a.innerHTML = '<span class="nav-icon">' + ICONS[r.key] + '</span><span>' + r.label + '</span>';
+      sidebarNav.appendChild(a);
+    });
+
+    hamburgerBtn.addEventListener("click", function () {
+      sidebar.classList.toggle("open");
+      overlay.classList.toggle("show");
+    });
+    overlay.addEventListener("click", closeSidebar);
+
+    window.addEventListener("hashchange", render);
+    window.__onRemoteDBChange = function () {
+      if (appStarted) render();
+    };
+
+    loadingOverlay.style.display = "none";
+    appStarted = true;
+    render();
+  }
+
+  Promise.all([whenDBReady(), getInitialAuthUser()]).then(function (results) {
+    const user = results[1];
+    if (!user) {
+      window.location.href = "index.html";
+      return;
+    }
+    const activeSession = buildSessionFromAuthUser(user);
+    if (!activeSession) {
+      // Login Firebase valid, tapi akunnya tidak/tidak lagi terdaftar sebagai staff.
+      auth.signOut().then(function () {
+        window.location.href = "index.html";
+      });
+      return;
+    }
+    startApp(activeSession);
+  });
+
+  // Kalau sesi login berakhir (logout dari tab lain, dsb) saat aplikasi sudah berjalan.
+  auth.onAuthStateChanged(function (user) {
+    if (!user && appStarted) {
+      window.location.href = "index.html";
+    }
+  });
 })();

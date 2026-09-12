@@ -1,12 +1,13 @@
 /* ===========================================================
-   MIPO GROUP DASHBOARD — data layer (localStorage)
-   Ganti modul ini dengan panggilan API/database sungguhan
-   kapan pun backend sudah siap; bentuk data di bawah sengaja
-   dibuat sederhana supaya migrasinya mudah.
+   MIPO GROUP DASHBOARD — data layer (Firebase Firestore + Auth)
+   Seluruh data disimpan di satu dokumen Firestore (mipo/app) dan
+   disinkronkan real-time ke semua perangkat. Login memakai
+   Firebase Authentication (email/password) — bukan lagi
+   dicocokkan manual di sini.
    =========================================================== */
 
-const DB_KEY = "mipo_dashboard_db_v1";
-const SESSION_KEY = "mipo_dashboard_session_v1";
+const DB_COLLECTION = "mipo";
+const DB_DOC_ID = "app";
 
 function uid(prefix) {
   return (prefix ? prefix + "-" : "") + Math.random().toString(36).slice(2, 9);
@@ -22,16 +23,8 @@ function seedDB() {
       {
         id: uid("usr"),
         name: "Admin Mipo",
-        email: "admin@mipogroup.com",
-        password: "admin123",
-        role: "admin", // admin = akses penuh, staff = terbatas
-      },
-      {
-        id: uid("usr"),
-        name: "Staff Operasional",
-        email: "staff@mipogroup.com",
-        password: "staff123",
-        role: "staff",
+        email: "iyanmorinptr@gmail.com",
+        role: "admin", // admin = akses penuh, staff = terbatas. Password dikelola Firebase Authentication, bukan di sini.
       },
     ],
     schedules: [
@@ -46,101 +39,11 @@ function seedDB() {
         location: "Ballroom Hotel Mulia, Jakarta",
         notes: "Setup 1 jam sebelum acara dimulai",
       },
-      {
-        id: uid("sch"),
-        date: todayISO(),
-        client: "Yayasan Harapan Bangsa",
-        menu: "Prasmanan Nusantara, Dessert Table",
-        departureTime: "09:00",
-        standbyTime: "10:30",
-        staff: "Fajar, Nita, Bagus",
-        location: "Gedung Serbaguna, Bekasi",
-        notes: "Bawa dekorasi tambahan sesuai request klien",
-      },
     ],
-    finance: [
-      {
-        id: uid("fin"),
-        date: todayISO(),
-        type: "in",
-        category: "Pemasukan Jasa",
-        description: "Pembayaran termin 1 - PT Sinar Abadi",
-        amount: 15000000,
-        ref: "",
-      },
-      {
-        id: uid("fin"),
-        date: todayISO(),
-        type: "out",
-        category: "Operasional",
-        description: "Belanja bahan baku catering",
-        amount: 4500000,
-        ref: "",
-      },
-    ],
-    invoices: [
-      {
-        id: uid("inv"),
-        number: "INV/2026/09/001",
-        client: "PT Sinar Abadi",
-        clientPhone: "021-5551234",
-        clientVenue: "Ballroom Hotel Mulia, Jakarta",
-        transaction: "Layanan Catering Acara Korporat",
-        date: todayISO(),
-        dpPercent: 50,
-        items: [
-          { desc: "Nasi Box Premium (200 pax)", qty: 200, price: 45000 },
-          { desc: "Coffee Break", qty: 200, price: 15000 },
-        ],
-        status: "unpaid",
-      },
-    ],
-    inventory: [
-      {
-        id: uid("ivt"),
-        name: "Chafing Dish Stainless",
-        category: "Peralatan Saji",
-        qty: 40,
-        condition: "Baik",
-        location: "Gudang Utama",
-      },
-      {
-        id: uid("ivt"),
-        name: "Tenda Sarnafil 5x5",
-        category: "Perlengkapan Event",
-        qty: 8,
-        condition: "Baik",
-        location: "Gudang Cabang",
-      },
-      {
-        id: uid("ivt"),
-        name: "Mobil Box Delivery",
-        category: "Kendaraan Operasional",
-        qty: 2,
-        condition: "Perlu Servis",
-        location: "Pool Kendaraan",
-      },
-    ],
-    maintenance: [
-      {
-        id: uid("mnt"),
-        itemName: "Mobil Box Delivery (B 1234 XYZ)",
-        type: "perawatan",
-        dueDate: todayISO(),
-        cost: 1200000,
-        status: "terjadwal",
-        notes: "Servis rutin 10.000 km",
-      },
-      {
-        id: uid("mnt"),
-        itemName: "Mobil Box Delivery (B 1234 XYZ)",
-        type: "pajak",
-        dueDate: todayISO(),
-        cost: 850000,
-        status: "belum dibayar",
-        notes: "Pajak tahunan STNK",
-      },
-    ],
+    finance: [],
+    invoices: [],
+    inventory: [],
+    maintenance: [],
     companyInfo: {
       bankName: "Nama Bank",
       accountName: "Nama Pemilik Rekening",
@@ -151,8 +54,14 @@ function seedDB() {
 }
 
 function migrateDB(db) {
-  // Menambahkan field baru pada data lama yang tersimpan di browser
-  // supaya versi dashboard yang lebih baru tidak error.
+  // Menambahkan field baru pada data lama supaya versi dashboard
+  // yang lebih baru tidak error terhadap data yang sudah ada.
+  db.users = db.users || [];
+  db.schedules = db.schedules || [];
+  db.finance = db.finance || [];
+  db.invoices = db.invoices || [];
+  db.inventory = db.inventory || [];
+  db.maintenance = db.maintenance || [];
   if (!db.companyInfo) {
     db.companyInfo = {
       bankName: "Nama Bank",
@@ -161,7 +70,7 @@ function migrateDB(db) {
       paymentNote: "Please make payment 7 days before the day",
     };
   }
-  (db.invoices || []).forEach(function (inv) {
+  db.invoices.forEach(function (inv) {
     if (inv.clientPhone === undefined) inv.clientPhone = "";
     if (inv.clientVenue === undefined) inv.clientVenue = "";
     if (inv.dpPercent === undefined) inv.dpPercent = 50;
@@ -169,49 +78,128 @@ function migrateDB(db) {
   return db;
 }
 
-function loadDB() {
-  const raw = localStorage.getItem(DB_KEY);
-  if (!raw) {
-    const seeded = seedDB();
-    localStorage.setItem(DB_KEY, JSON.stringify(seeded));
-    return seeded;
-  }
-  try {
-    return migrateDB(JSON.parse(raw));
-  } catch (e) {
-    const seeded = seedDB();
-    localStorage.setItem(DB_KEY, JSON.stringify(seeded));
-    return seeded;
-  }
+/* ---------- Firestore-backed data store ---------- */
+let _cachedDB = null;
+let _dbInitStarted = false;
+let _firstSnapshotHandled = false;
+let _dbReadyResolve;
+const _dbReadyPromise = new Promise(function (resolve) {
+  _dbReadyResolve = resolve;
+});
+
+function _dbRef() {
+  return firestore.collection(DB_COLLECTION).doc(DB_DOC_ID);
 }
 
-function saveDB(db) {
-  localStorage.setItem(DB_KEY, JSON.stringify(db));
-}
-
-/* ---------- session ---------- */
-function getSession() {
-  try {
-    return JSON.parse(sessionStorage.getItem(SESSION_KEY) || "null");
-  } catch (e) {
-    return null;
-  }
-}
-
-function setSession(user) {
-  sessionStorage.setItem(
-    SESSION_KEY,
-    JSON.stringify({ id: user.id, name: user.name, email: user.email, role: user.role })
+function initDB() {
+  if (_dbInitStarted) return;
+  _dbInitStarted = true;
+  _dbRef().onSnapshot(
+    function (snap) {
+      if (!snap.exists) {
+        const seeded = seedDB();
+        _cachedDB = seeded;
+        _dbRef()
+          .set(seeded)
+          .catch(function (e) {
+            console.error("Gagal membuat data awal di Firestore:", e);
+          });
+      } else {
+        _cachedDB = migrateDB(snap.data());
+      }
+      if (!_firstSnapshotHandled) {
+        _firstSnapshotHandled = true;
+        _dbReadyResolve();
+      } else if (typeof window.__onRemoteDBChange === "function") {
+        window.__onRemoteDBChange();
+      }
+    },
+    function (err) {
+      console.error("Gagal memuat data dashboard dari Firestore:", err);
+      if (!_firstSnapshotHandled) {
+        _firstSnapshotHandled = true;
+        _dbReadyResolve();
+      }
+    }
   );
 }
 
-function clearSession() {
-  sessionStorage.removeItem(SESSION_KEY);
+function whenDBReady() {
+  initDB();
+  return _dbReadyPromise;
+}
+
+function loadDB() {
+  return _cachedDB || seedDB();
+}
+
+function saveDB(db) {
+  _cachedDB = db;
+  _dbRef()
+    .set(db)
+    .catch(function (e) {
+      console.error("Gagal menyimpan data ke Firestore:", e);
+      window.alert("Gagal menyimpan perubahan ke server. Periksa koneksi internet kamu, lalu coba lagi.");
+    });
+}
+
+/* ---------- Authentication / session ---------- */
+let _sessionCache = null;
+
+function getSession() {
+  return _sessionCache;
 }
 
 function isAdmin() {
-  const s = getSession();
-  return !!s && s.role === "admin";
+  return !!_sessionCache && _sessionCache.role === "admin";
+}
+
+function clearSession() {
+  _sessionCache = null;
+  return auth.signOut();
+}
+
+function buildSessionFromAuthUser(user) {
+  if (!user) {
+    _sessionCache = null;
+    return null;
+  }
+  const db = loadDB();
+  const match = (db.users || []).find(function (u) {
+    return (u.email || "").toLowerCase() === user.email.toLowerCase();
+  });
+  if (!match) {
+    _sessionCache = null;
+    return null;
+  }
+  _sessionCache = { id: match.id, name: match.name, email: match.email, role: match.role };
+  return _sessionCache;
+}
+
+function getInitialAuthUser() {
+  return new Promise(function (resolve) {
+    const unsub = auth.onAuthStateChanged(function (user) {
+      unsub();
+      resolve(user);
+    });
+  });
+}
+
+function mapAuthError(err) {
+  const code = err && err.code;
+  const map = {
+    "auth/invalid-email": "Format email tidak valid.",
+    "auth/user-disabled": "Akun ini telah dinonaktifkan.",
+    "auth/user-not-found": "Email atau kata sandi salah. Silakan coba lagi.",
+    "auth/wrong-password": "Email atau kata sandi salah. Silakan coba lagi.",
+    "auth/invalid-credential": "Email atau kata sandi salah. Silakan coba lagi.",
+    "auth/too-many-requests": "Terlalu banyak percobaan gagal. Coba lagi beberapa saat lagi.",
+    "auth/network-request-failed": "Tidak ada koneksi internet. Periksa jaringan kamu.",
+    "auth/requires-recent-login": "Sesi login sudah lama. Silakan keluar dan masuk kembali sebelum mengubah kata sandi.",
+    "auth/email-already-in-use": "Email ini sudah terdaftar.",
+    "auth/weak-password": "Kata sandi terlalu pendek (minimal 6 karakter).",
+  };
+  return map[code] || "Terjadi kesalahan. Silakan coba lagi.";
 }
 
 /* ---------- formatting helpers ---------- */

@@ -1,6 +1,11 @@
 /* ===========================================================
    MODULE: Settings
    Manajemen akun staff (khusus admin) & ubah kata sandi sendiri.
+   Login sungguhan dikelola Firebase Authentication — menu ini
+   hanya mengatur nama/peran staff (di Firestore) dan membuat/
+   mencabut akses. Password akun baru dibuat langsung di Firebase
+   Authentication lewat instance app kedua, supaya admin yang
+   sedang login tidak ikut ter-logout.
    =========================================================== */
 
 const SettingsModule = (function () {
@@ -35,41 +40,81 @@ const SettingsModule = (function () {
     }
 
     function userFormHtml(existing) {
-      const u = existing || { name: "", email: "", password: "", role: "staff" };
+      const u = existing || { name: "", email: "", role: "staff" };
       return (
         "<h3>" + (existing ? "Edit Akun Staff" : "Tambah Akun Staff") + "</h3>" +
-        '<p class="modal-sub">Akun ini digunakan staff untuk login ke dashboard.</p>' +
+        '<p class="modal-sub">' +
+          (existing
+            ? "Email tidak bisa diubah di sini. Untuk ubah password, minta staff bersangkutan memakai menu \"Ubah Kata Sandi\" di akunnya sendiri."
+            : "Akun login akan langsung dibuat di Firebase Authentication.") +
+        "</p>" +
+        '<div id="userFormError" class="login-error" style="display:none; margin-bottom:16px;"></div>' +
         '<form id="userForm"><div class="form-grid">' +
         '<div class="form-field full"><label>Nama Lengkap</label><input type="text" name="name" value="' + escapeHtml(u.name) + '" required></div>' +
-        '<div class="form-field full"><label>Email</label><input type="email" name="email" value="' + escapeHtml(u.email) + '" required></div>' +
-        '<div class="form-field"><label>Kata Sandi' + (existing ? " (kosongkan jika tidak diubah)" : "") + "</label><input type=\"text\" name=\"password\" value=\"" + (existing ? "" : escapeHtml(u.password)) + '" ' + (existing ? "" : "required") + "></div>" +
+        '<div class="form-field full"><label>Email</label><input type="email" name="email" value="' + escapeHtml(u.email) + '" ' + (existing ? "readonly" : "required") + "></div>" +
+        (existing
+          ? ""
+          : '<div class="form-field full"><label>Kata Sandi Awal</label><input type="text" name="password" required minlength="6" placeholder="minimal 6 karakter"></div>') +
         '<div class="form-field"><label>Peran</label><select name="role">' +
           '<option value="staff"' + (u.role === "staff" ? " selected" : "") + '>Staff</option>' +
           '<option value="admin"' + (u.role === "admin" ? " selected" : "") + '>Administrator</option>' +
         "</select></div>" +
         "</div>" +
-        '<div class="modal-actions"><button type="button" class="btn btn-ghost btn-sm" id="cancelBtn">Batal</button><button type="submit" class="btn btn-sm" style="width:auto;">Simpan</button></div>' +
+        '<div class="modal-actions"><button type="button" class="btn btn-ghost btn-sm" id="cancelBtn">Batal</button><button type="submit" class="btn btn-sm" style="width:auto;" id="userFormSubmitBtn">Simpan</button></div>' +
         "</form>"
       );
+    }
+
+    function createStaffAuthAccount(email, password) {
+      // Pakai instance Firebase app kedua supaya admin yang sedang login
+      // tidak ikut ter-logout saat akun staff baru dibuat.
+      const secondaryApp = firebase.initializeApp(firebaseConfig, "Secondary-" + Date.now());
+      const secondaryAuth = secondaryApp.auth();
+      return secondaryAuth
+        .createUserWithEmailAndPassword(email, password)
+        .then(function () {
+          return secondaryAuth.signOut();
+        })
+        .then(function () {
+          return secondaryApp.delete();
+        });
     }
 
     function openUserForm(existing) {
       openModal(userFormHtml(existing), function (modalEl) {
         modalEl.querySelector("#cancelBtn").addEventListener("click", closeModal);
+        const errorBox = modalEl.querySelector("#userFormError");
+        const submitBtn = modalEl.querySelector("#userFormSubmitBtn");
+
         modalEl.querySelector("#userForm").addEventListener("submit", function (e) {
           e.preventDefault();
           const data = Object.fromEntries(new FormData(e.target).entries());
+          errorBox.style.display = "none";
+
           if (existing) {
             existing.name = data.name;
-            existing.email = data.email;
             existing.role = data.role;
-            if (data.password) existing.password = data.password;
-          } else {
-            db.users.push({ id: uid("usr"), name: data.name, email: data.email, password: data.password, role: data.role });
+            saveDB(db);
+            closeModal();
+            renderAll();
+            return;
           }
-          saveDB(db);
-          closeModal();
-          renderAll();
+
+          submitBtn.disabled = true;
+          submitBtn.textContent = "Membuat akun...";
+          createStaffAuthAccount(data.email, data.password)
+            .then(function () {
+              db.users.push({ id: uid("usr"), name: data.name, email: data.email, role: data.role });
+              saveDB(db);
+              closeModal();
+              renderAll();
+            })
+            .catch(function (err) {
+              errorBox.textContent = mapAuthError(err);
+              errorBox.style.display = "block";
+              submitBtn.disabled = false;
+              submitBtn.textContent = "Simpan";
+            });
         });
       });
     }
@@ -94,7 +139,7 @@ const SettingsModule = (function () {
       const ci = db.companyInfo || {};
       openModal(
         "<h3>Info Pembayaran</h3>" +
-        '<p class="modal-sub">Informasi ini tampil di setiap invoice yang dibuat. Tersimpan di browser ini saja, tidak masuk ke source code.</p>' +
+        '<p class="modal-sub">Informasi ini tampil di setiap invoice yang dibuat, tersinkron ke semua perangkat.</p>' +
         '<form id="companyInfoForm"><div class="form-grid">' +
         '<div class="form-field full"><label>Nama Bank</label><input type="text" name="bankName" value="' + escapeHtml(ci.bankName || "") + '" required></div>' +
         '<div class="form-field full"><label>Nama Pemilik Rekening</label><input type="text" name="accountName" value="' + escapeHtml(ci.accountName || "") + '" required></div>' +
@@ -131,23 +176,36 @@ const SettingsModule = (function () {
     }
 
     function openChangePassword() {
-      const me = db.users.find((u) => u.id === ctx.session.id);
       openModal(
         "<h3>Ubah Kata Sandi</h3>" +
         '<p class="modal-sub">Masukkan kata sandi baru untuk akun Anda.</p>' +
+        '<div id="pwFormError" class="login-error" style="display:none; margin-bottom:16px;"></div>' +
         '<form id="pwForm"><div class="form-grid">' +
-        '<div class="form-field full"><label>Kata Sandi Baru</label><input type="password" name="password" required minlength="4"></div>' +
+        '<div class="form-field full"><label>Kata Sandi Baru</label><input type="password" name="password" required minlength="6"></div>' +
         "</div>" +
-        '<div class="modal-actions"><button type="button" class="btn btn-ghost btn-sm" id="cancelBtn">Batal</button><button type="submit" class="btn btn-sm" style="width:auto;">Simpan</button></div>' +
+        '<div class="modal-actions"><button type="button" class="btn btn-ghost btn-sm" id="cancelBtn">Batal</button><button type="submit" class="btn btn-sm" style="width:auto;" id="pwSubmitBtn">Simpan</button></div>' +
         "</form>",
         function (modalEl) {
           modalEl.querySelector("#cancelBtn").addEventListener("click", closeModal);
+          const errorBox = modalEl.querySelector("#pwFormError");
+          const submitBtn = modalEl.querySelector("#pwSubmitBtn");
           modalEl.querySelector("#pwForm").addEventListener("submit", function (e) {
             e.preventDefault();
-            me.password = new FormData(e.target).get("password");
-            saveDB(db);
-            closeModal();
-            window.alert("Kata sandi berhasil diperbarui.");
+            const newPassword = new FormData(e.target).get("password");
+            submitBtn.disabled = true;
+            submitBtn.textContent = "Menyimpan...";
+            auth.currentUser
+              .updatePassword(newPassword)
+              .then(function () {
+                closeModal();
+                window.alert("Kata sandi berhasil diperbarui.");
+              })
+              .catch(function (err) {
+                errorBox.textContent = mapAuthError(err);
+                errorBox.style.display = "block";
+                submitBtn.disabled = false;
+                submitBtn.textContent = "Simpan";
+              });
           });
         }
       );
@@ -183,7 +241,7 @@ const SettingsModule = (function () {
       });
       container.querySelectorAll("[data-del]").forEach(function (btn) {
         btn.addEventListener("click", function () {
-          if (!confirmAction("Hapus akun staff ini?")) return;
+          if (!confirmAction("Hapus akun staff ini dari dashboard? Orang ini tidak akan bisa masuk lagi, tapi akun login Firebase-nya tidak otomatis terhapus (bisa dihapus manual lewat Firebase Console bila perlu).")) return;
           db.users = db.users.filter((u) => u.id !== btn.dataset.del);
           saveDB(db);
           renderAll();
