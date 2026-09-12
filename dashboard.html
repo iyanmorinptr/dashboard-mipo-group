@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mipo Group Dashboard</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="app-shell">
+
+  <div class="overlay" id="overlay"></div>
+
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="logo-row">
+        <svg class="logo-mark" viewBox="0 0 200 160" xmlns="http://www.w3.org/2000/svg">
+          <path d="M 22,138 L22,20 L100,96 L178,20 L178,116 C178,132 166,138 148,138" />
+        </svg>
+        <div class="logo-divider"></div>
+        <div>
+          <div class="logo-text-main">MIPO</div>
+          <div class="logo-text-sub">GROUP</div>
+        </div>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav" id="sidebarNav"></nav>
+
+    <div class="sidebar-footer">
+      <div class="user-chip">
+        <div class="user-avatar" id="userAvatar">-</div>
+        <div class="user-meta">
+          <div class="name" id="userName">-</div>
+          <div class="role" id="userRole">-</div>
+        </div>
+      </div>
+      <button class="logout-btn" id="logoutBtn">Keluar</button>
+    </div>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <div style="display:flex; align-items:center; gap:14px;">
+        <button class="hamburger" id="hamburgerBtn" aria-label="Menu">
+          <span></span><span></span><span></span>
+        </button>
+        <div>
+          <div class="topbar-title" id="pageTitle">Schedule</div>
+          <div class="topbar-sub" id="pageSubtitle">Rancangan jadwal client hari ini</div>
+        </div>
+      </div>
+    </header>
+
+    <main class="content" id="content"></main>
+  </div>
+
+</div>
+
+<script src="js/data.js"></script>
+<script src="js/util.js"></script>
+<script src="js/modules/schedule.js"></script>
+<script src="js/modules/finance.js"></script>
+<script src="js/modules/invoice.js"></script>
+<script src="js/modules/inventory.js"></script>
+<script src="js/modules/maintenance.js"></script>
+<script src="js/modules/settings.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

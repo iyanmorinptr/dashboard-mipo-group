@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mipo Group Dashboard — Login</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body class="login-page">
+
+  <div class="login-card">
+    <div class="logo-row">
+      <svg class="logo-mark" viewBox="0 0 200 160" xmlns="http://www.w3.org/2000/svg">
+        <path d="M 22,138 L22,20 L100,96 L178,20 L178,116 C178,132 166,138 148,138" />
+      </svg>
+      <div class="logo-divider"></div>
+      <div>
+        <div class="logo-text-main">MIPO</div>
+        <div class="logo-text-sub">GROUP</div>
+      </div>
+    </div>
+
+    <p class="welcome-title">Selamat Datang</p>
+    <h1 class="welcome-sub">WELCOME TO MIPO DASHBOARD</h1>
+
+    <div id="loginError" class="login-error" style="display:none;"></div>
+
+    <form id="loginForm">
+      <div class="field">
+        <label for="email">Email Staff</label>
+        <input type="email" id="email" name="email" placeholder="nama@mipogroup.com" required autocomplete="username">
+      </div>
+      <div class="field">
+        <label for="password">Kata Sandi</label>
+        <input type="password" id="password" name="password" placeholder="••••••••" required autocomplete="current-password">
+      </div>
+      <button type="submit" class="btn">Masuk</button>
+    </form>
+
+    <p class="login-hint sans">
+      Akun demo — Admin: admin@mipogroup.com / admin123<br>
+      Staff: staff@mipogroup.com / staff123
+    </p>
+  </div>
+
+<script src="js/data.js"></script>
+<script>
+  (function () {
+    // sudah login? langsung arahkan ke dashboard
+    if (getSession()) {
+      window.location.href = "dashboard.html";
+      return;
+    }
+
+    const form = document.getElementById("loginForm");
+    const errorBox = document.getElementById("loginError");
+
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
+      const email = document.getElementById("email").value.trim().toLowerCase();
+      const password = document.getElementById("password").value;
+
+      const db = loadDB();
+      const user = db.users.find(
+        (u) => u.email.toLowerCase() === email && u.password === password
+      );
+
+      if (!user) {
+        errorBox.textContent = "Email atau kata sandi salah. Silakan coba lagi.";
+        errorBox.style.display = "block";
+        return;
+      }
+
+      setSession(user);
+      window.location.href = "dashboard.html";
+    });
+  })();
+</script>
+</body>
+</html>
