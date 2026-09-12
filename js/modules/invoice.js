@@ -197,7 +197,7 @@ const InvoiceModule = (function () {
         .join("");
 
       return (
-        '<div id="invoiceCardCapture" style="background:#e9e8e6; color:#111; width:640px; max-width:100%; padding:56px 48px 48px; font-family:-apple-system,BlinkMacSystemFont,\'SF Pro Text\',\'Helvetica Neue\',Arial,sans-serif; box-sizing:border-box;">' +
+        '<div id="invoiceCardCapture" style="background:#e9e8e6; color:#111; width:640px; max-width:100%; min-width:0; padding:56px 48px 48px; font-family:-apple-system,BlinkMacSystemFont,\'SF Pro Text\',\'Helvetica Neue\',Arial,sans-serif; box-sizing:border-box; overflow-wrap:break-word;">' +
           '<div style="display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:34px;">' +
             '<svg viewBox="0 0 300 300" style="width:70px; height:70px; flex-shrink:0;"><path d="M75,237 L75,67.5 L150,156 L225,67.5 L225,216 C225,230 232,237 246,237" fill="none" stroke="#111" stroke-width="15" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
             '<div style="font-size:40px; font-weight:800; letter-spacing:-0.01em;">INVOICE</div>' +
