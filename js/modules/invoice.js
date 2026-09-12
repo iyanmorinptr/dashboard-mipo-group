@@ -2,9 +2,11 @@
    MODULE: Invoice
    Pembuatan invoice & rekapan. Saat invoice ditandai LUNAS,
    otomatis tercatat sebagai pemasukan di Finance (dengan
-   referensi nomor invoice, nama client & nama transaksi).
-   Invoice juga bisa ditampilkan sebagai kartu cetak (desain
-   Mipo Group) dan diunduh/dibagikan sebagai gambar PNG.
+   referensi nomor invoice & nama client). Rincian item bisa
+   dipilih langsung dari pricelist resmi (lihat js/pricelist.js)
+   supaya tidak perlu ketik manual. Invoice juga bisa ditampilkan
+   sebagai kartu cetak (desain Mipo Group) dan diunduh/dibagikan
+   sebagai gambar PNG.
    =========================================================== */
 
 const InvoiceModule = (function () {
@@ -49,7 +51,6 @@ const InvoiceModule = (function () {
             "<td><strong>" + escapeHtml(inv.number) + "</strong></td>" +
             "<td>" + formatDate(inv.date) + "</td>" +
             "<td>" + escapeHtml(inv.client) + "</td>" +
-            "<td>" + escapeHtml(inv.transaction) + "</td>" +
             "<td>" + formatIDR(total) + "</td>" +
             "<td>" + (inv.status === "paid" ? '<span class="pill pill-green">Lunas</span>' : '<span class="pill pill-gold">Belum Lunas</span>') + "</td>" +
             "<td><div class=\"row-actions\">" +
@@ -63,20 +64,41 @@ const InvoiceModule = (function () {
         })
         .join("");
       return (
-        '<div class="table-wrap"><table><thead><tr><th>No. Invoice</th><th>Tanggal</th><th>Client</th><th>Transaksi</th><th>Total</th><th>Status</th><th>Aksi</th></tr></thead><tbody>' +
+        '<div class="table-wrap"><table><thead><tr><th>No. Invoice</th><th>Tanggal</th><th>Client</th><th>Total</th><th>Status</th><th>Aksi</th></tr></thead><tbody>' +
         trs +
         "</tbody></table></div>"
       );
     }
 
+    function pricelistOptionsHtml() {
+      let html = '<option value="">— Pilih item dari pricelist —</option>';
+      PRICELIST.forEach(function (group) {
+        html += '<optgroup label="' + escapeHtml(group.category) + '">';
+        group.items.forEach(function (it) {
+          html +=
+            '<option value="' + escapeHtml(it.name) + "|" + it.price + '">' +
+            escapeHtml(it.name) + " — " + formatIDR(it.price) +
+            "</option>";
+        });
+        html += "</optgroup>";
+      });
+      html += '<option value="__custom__">Item kustom (ketik manual)</option>';
+      return html;
+    }
+
     function itemRowHtml(item, idx) {
       item = item || { desc: "", qty: 1, price: 0 };
+      const selectStyle =
+        "width:100%; margin-bottom:6px; border:1px solid transparent; border-radius:10px; padding:9px 12px; font-size:13px; background:var(--cream-2); color:var(--ink);";
       return (
+        '<div class="invoice-item-block" data-block="' + idx + '" style="margin-bottom:14px; padding-bottom:12px; border-bottom:1px dashed var(--border);">' +
+        '<select class="item-picker" style="' + selectStyle + '">' + pricelistOptionsHtml() + "</select>" +
         '<div class="invoice-items-row" data-row="' + idx + '">' +
         '<input type="text" placeholder="Deskripsi item" name="item_desc_' + idx + '" value="' + escapeHtml(item.desc) + '" required>' +
         '<input type="number" min="1" placeholder="Qty" name="item_qty_' + idx + '" value="' + escapeHtml(item.qty) + '" required>' +
         '<input type="number" min="0" placeholder="Harga satuan" name="item_price_' + idx + '" value="' + escapeHtml(item.price) + '" required>' +
         '<button type="button" class="icon-btn danger" data-remove-row="' + idx + '" title="Hapus baris">&times;</button>' +
+        "</div>" +
         "</div>"
       );
     }
@@ -87,7 +109,6 @@ const InvoiceModule = (function () {
         client: "",
         clientPhone: "",
         clientVenue: "",
-        transaction: "",
         date: todayISO(),
         dpPercent: 50,
         items: [{ desc: "", qty: 1, price: 0 }],
@@ -95,7 +116,7 @@ const InvoiceModule = (function () {
       const itemsHtml = inv.items.map(function (it, idx) { return itemRowHtml(it, idx); }).join("");
       return (
         "<h3>" + (existing ? "Edit Invoice" : "Buat Invoice Baru") + "</h3>" +
-        '<p class="modal-sub">Nomor invoice, client dan transaksi akan menjadi referensi otomatis ke Finance saat dibayar.</p>' +
+        '<p class="modal-sub">Nomor invoice & client akan menjadi referensi otomatis ke Finance saat dibayar. Pilih item dari pricelist supaya tidak perlu ketik manual.</p>' +
         '<form id="invoiceForm">' +
         '<div class="form-grid">' +
         '<div class="form-field"><label>Nomor Invoice</label><input type="text" name="number" value="' + escapeHtml(inv.number) + '" required></div>' +
@@ -103,7 +124,6 @@ const InvoiceModule = (function () {
         '<div class="form-field"><label>Nama Client</label><input type="text" name="client" value="' + escapeHtml(inv.client) + '" required></div>' +
         '<div class="form-field"><label>No. Telepon Client</label><input type="text" name="clientPhone" value="' + escapeHtml(inv.clientPhone) + '" placeholder="mis. 0812xxxxxxx"></div>' +
         '<div class="form-field"><label>Lokasi / Venue</label><input type="text" name="clientVenue" value="' + escapeHtml(inv.clientVenue) + '"></div>' +
-        '<div class="form-field"><label>Nama Transaksi</label><input type="text" name="transaction" value="' + escapeHtml(inv.transaction) + '" required></div>' +
         '<div class="form-field"><label>DP (%)</label><input type="number" min="0" max="100" name="dpPercent" value="' + escapeHtml(inv.dpPercent) + '"></div>' +
         "</div>" +
         '<div style="margin-top:18px;"><label class="sans" style="display:block; font-size:11px; letter-spacing:1px; text-transform:uppercase; color:var(--muted); margin-bottom:9px;">Rincian Item</label>' +
@@ -133,11 +153,27 @@ const InvoiceModule = (function () {
           itemsWrap.querySelectorAll("[data-remove-row]").forEach(function (btn) {
             btn.onclick = function () {
               if (itemsWrap.children.length <= 1) return;
-              btn.closest(".invoice-items-row").remove();
+              btn.closest(".invoice-item-block").remove();
             };
           });
         }
         bindRemoveButtons();
+
+        // Pilih item dari pricelist otomatis mengisi deskripsi & harga satuan
+        // (qty tetap diisi manual). Pilih "Item kustom" untuk ketik sendiri.
+        itemsWrap.addEventListener("change", function (e) {
+          if (!e.target.classList.contains("item-picker")) return;
+          const val = e.target.value;
+          if (!val || val === "__custom__") return;
+          const parts = val.split("|");
+          const name = parts[0];
+          const price = parts[1];
+          const block = e.target.closest(".invoice-item-block");
+          const descInput = block.querySelector('input[name^="item_desc_"]');
+          const priceInput = block.querySelector('input[name^="item_price_"]');
+          if (descInput) descInput.value = name;
+          if (priceInput) priceInput.value = price;
+        });
 
         modalEl.querySelector("#invoiceForm").addEventListener("submit", function (e) {
           e.preventDefault();
@@ -157,7 +193,6 @@ const InvoiceModule = (function () {
             client: obj.client,
             clientPhone: obj.clientPhone || "",
             clientVenue: obj.clientVenue || "",
-            transaction: obj.transaction,
             dpPercent: obj.dpPercent === "" ? 0 : Number(obj.dpPercent),
             items: items,
           };
@@ -350,7 +385,7 @@ const InvoiceModule = (function () {
         date: todayISO(),
         type: "in",
         category: "Pemasukan Invoice",
-        description: inv.transaction + " - " + inv.client,
+        description: "Invoice " + inv.number + " - " + inv.client,
         amount: invoiceTotal(inv),
         ref: inv.number,
       });

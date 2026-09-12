@@ -64,11 +64,15 @@ Console (Authentication → Users → Add user) untuk akun pertama.
 2. **Finance** — kas perusahaan, pemasukan, pengeluaran, omset, profit.
 3. **Invoice** — pembuatan invoice & rekapan; saat invoice ditandai lunas,
    otomatis tercatat sebagai pemasukan di Finance (dengan referensi nomor
-   invoice, nama client, dan nama transaksi). Setiap invoice bisa dilihat
-   sebagai kartu bergaya cetak (desain Mipo Group) dan diunduh/dibagikan
-   sebagai gambar PNG langsung ke WhatsApp lewat tombol "Bagikan ke
-   WhatsApp" (memakai Web Share API bila didukung perangkat/browser;
-   kalau tidak, gambar diunduh lalu dibagikan manual).
+   invoice & nama client). Rincian item bisa dipilih langsung dari
+   **pricelist resmi Mipo Group** (`js/pricelist.js` — Koneo Goes To, Runna
+   Kitchen, Warmiepo) sehingga deskripsi & harga satuan terisi otomatis
+   tanpa perlu diketik manual; opsi "Item kustom" tetap tersedia untuk item
+   di luar pricelist. Setiap invoice bisa dilihat sebagai kartu bergaya
+   cetak (desain Mipo Group) dan diunduh/dibagikan sebagai gambar PNG
+   langsung ke WhatsApp lewat tombol "Bagikan ke WhatsApp" (memakai Web
+   Share API bila didukung perangkat/browser; kalau tidak, gambar diunduh
+   lalu dibagikan manual).
 4. **Inventory** — peralatan & perlengkapan milik perusahaan.
 5. **Maintenance** — jadwal perawatan peralatan/perlengkapan & pembayaran
    pajak aset.
