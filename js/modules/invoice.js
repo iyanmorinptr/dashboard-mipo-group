@@ -219,7 +219,7 @@ const InvoiceModule = (function () {
           "</div>" +
 
           '<table style="width:100%; border-collapse:collapse; font-size:14px;">' +
-            '<thead><tr>' +
+            '<thead><tr style="background:transparent;">' +
               '<th style="padding:10px 8px 10px 0; text-align:left; font-weight:700; text-transform:none; letter-spacing:normal; color:#111; border-bottom:1.5px solid #111;">Item</th>' +
               '<th style="padding:10px 8px; text-align:center; font-weight:700; text-transform:none; letter-spacing:normal; color:#111; border-bottom:1.5px solid #111;">Quantity</th>' +
               '<th style="padding:10px 8px; text-align:right; font-weight:700; text-transform:none; letter-spacing:normal; color:#111; border-bottom:1.5px solid #111;">Unit Price</th>' +
@@ -283,8 +283,8 @@ const InvoiceModule = (function () {
 
     function viewInvoice(inv) {
       openModal(
-        '<div id="invoiceModalScroll" style="max-height:74vh; overflow-y:auto; border-radius:22px 22px 0 0; display:flex; justify-content:center; background:#e9e8e6;">' + invoiceCardHtml(inv) + "</div>" +
-        '<div class="modal-actions" style="padding:18px 28px 24px; margin:0; border-top:1px solid var(--border);">' +
+        '<div id="invoiceModalScroll" style="border-radius:22px 22px 0 0; display:flex; justify-content:center; background:#e9e8e6;">' + invoiceCardHtml(inv) + "</div>" +
+        '<div class="modal-actions" style="padding:18px 28px 24px; margin:0; border-top:1px solid var(--border); background:var(--white); flex-wrap:wrap;">' +
           '<button type="button" class="btn btn-ghost btn-sm" id="closeViewBtn">Tutup</button>' +
           '<button type="button" class="btn btn-outline btn-sm" id="downloadPngBtn">Unduh PNG</button>' +
           '<button type="button" class="btn btn-sm" style="width:auto;" id="shareWaBtn">Bagikan ke WhatsApp</button>' +
@@ -294,7 +294,7 @@ const InvoiceModule = (function () {
           modalBox.style.maxWidth = "720px";
           modalBox.style.padding = "0";
           modalBox.style.overflow = "hidden";
-          modalEl.querySelector("#invoiceModalScroll").scrollTop = 0;
+          modalEl.scrollTop = 0;
           modalEl.querySelector("#closeViewBtn").addEventListener("click", closeModal);
 
           const downloadBtn = modalEl.querySelector("#downloadPngBtn");
