@@ -181,10 +181,14 @@ const InvoiceModule = (function () {
       const dpAmount = Math.round((subtotal * dpPercent) / 100);
       const ci = db.companyInfo || {};
 
-      const cellBorder = "border-bottom:1px solid #999; vertical-align:top;";
       const rows = inv.items
-        .map(function (it) {
+        .map(function (it, idx) {
           const lineTotal = (Number(it.qty) || 0) * (Number(it.price) || 0);
+          // Baris terakhir tidak diberi garis bawah sendiri — garis atas
+          // kotak Subtotal di bawahnya sudah jadi satu-satunya pembatas,
+          // supaya tidak ada dua garis yang bertumpuk berdekatan.
+          const isLast = idx === inv.items.length - 1;
+          const cellBorder = isLast ? "vertical-align:top;" : "border-bottom:1px solid #999; vertical-align:top;";
           return (
             '<tr>' +
             '<td style="padding:14px 8px 14px 0; text-align:left; ' + cellBorder + '">' + escapeHtml(it.desc) + "</td>" +
@@ -230,8 +234,8 @@ const InvoiceModule = (function () {
 
           '<div style="display:flex; justify-content:flex-end; margin-top:6px;">' +
             '<table style="border-collapse:collapse; font-size:14px; min-width:220px;">' +
-              '<tr style="border-top:1.5px solid #111;"><td style="padding:12px 20px 12px 0; font-weight:700;">Subtotal</td><td style="padding:12px 0; text-align:right;">' + formatNumberID(subtotal) + "</td></tr>" +
-              '<tr style="border-top:1.5px solid #111;"><td style="padding:12px 20px 0 0; font-weight:800; font-size:16px;">Dp ' + dpPercent + '%</td><td style="padding:12px 0 0; text-align:right; font-weight:800; font-size:20px;">' + formatNumberID(dpAmount) + "</td></tr>" +
+              '<tr style="border-top:1.5px solid #111;"><td style="padding:12px 20px 12px 0; font-weight:700; border-bottom:none;">Subtotal</td><td style="padding:12px 0; text-align:right; border-bottom:none;">' + formatNumberID(subtotal) + "</td></tr>" +
+              '<tr style="border-top:1.5px solid #111;"><td style="padding:12px 20px 0 0; font-weight:800; font-size:16px; border-bottom:none;">Dp ' + dpPercent + '%</td><td style="padding:12px 0 0; text-align:right; font-weight:800; font-size:20px; border-bottom:none;">' + formatNumberID(dpAmount) + "</td></tr>" +
             "</table>" +
           "</div>" +
 

@@ -382,17 +382,25 @@ button, input, select, textarea {
 .hamburger {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  align-items: stretch;
+  justify-content: center;
+  flex-shrink: 0;
+  gap: 5px;
   width: 30px;
   height: 24px;
   background: none;
   border: none;
   cursor: pointer;
   padding: 0;
+  -webkit-appearance: none;
+  appearance: none;
 }
 .hamburger span {
   display: block;
-  height: 2px;
+  width: 100%;
+  min-width: 30px;
+  height: 3px;
+  flex-shrink: 0;
   background: #000000;
   border-radius: 2px;
 }
