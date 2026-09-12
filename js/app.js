@@ -1,0 +1,105 @@
+/* ===========================================================
+   MIPO GROUP DASHBOARD — shell / router
+   =========================================================== */
+
+(function () {
+  const session = getSession();
+  if (!session) {
+    window.location.href = "index.html";
+    return;
+  }
+
+  const ICONS = {
+    schedule:
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>',
+    finance:
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 17l5-5 4 3 7-8"/><path d="M14 6h5v5"/></svg>',
+    invoice:
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 3h9l4 4v14H6z"/><path d="M9 9h7M9 13h7M9 17h4"/></svg>',
+    inventory:
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 8l9-5 9 5-9 5-9-5z"/><path d="M3 8v8l9 5 9-5V8M12 13v8"/></svg>',
+    maintenance:
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M14 3l3 3-8 8-4 1 1-4 8-8z"/><path d="M4 21l4-1"/></svg>',
+    settings:
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 00-.2-1.6l2-1.6-2-3.4-2.4.7a7 7 0 00-1.4-.8L14.6 3H9.4l-.4 2.3a7 7 0 00-1.4.8l-2.4-.7-2 3.4 2 1.6A7 7 0 005 12c0 .5.07 1 .2 1.6l-2 1.6 2 3.4 2.4-.7c.4.3.9.6 1.4.8l.4 2.3h5.2l.4-2.3c.5-.2 1-.5 1.4-.8l2.4.7 2-3.4-2-1.6c.13-.6.2-1.1.2-1.6z"/></svg>',
+  };
+
+  const ROUTES = [
+    { key: "schedule", label: "Schedule", title: "Schedule", subtitle: "Rancangan jadwal client secara detail", module: window.ScheduleModule },
+    { key: "finance", label: "Finance", title: "Finance", subtitle: "Kas, pemasukan, pengeluaran, omset & profit perusahaan", module: window.FinanceModule },
+    { key: "invoice", label: "Invoice", title: "Invoice", subtitle: "Pembuatan invoice & rekapan transaksi", module: window.InvoiceModule },
+    { key: "inventory", label: "Inventory", title: "Inventory", subtitle: "Peralatan & perlengkapan milik perusahaan", module: window.InventoryModule },
+    { key: "maintenance", label: "Maintenance", title: "Maintenance", subtitle: "Jadwal perawatan & pembayaran pajak aset", module: window.MaintenanceModule },
+    { key: "settings", label: "Settings", title: "Settings", subtitle: "Pengaturan akun & manajemen staff", module: window.SettingsModule },
+  ];
+
+  const sidebarNav = document.getElementById("sidebarNav");
+  const contentEl = document.getElementById("content");
+  const pageTitle = document.getElementById("pageTitle");
+  const pageSubtitle = document.getElementById("pageSubtitle");
+  const sidebar = document.getElementById("sidebar");
+  const overlay = document.getElementById("overlay");
+  const hamburgerBtn = document.getElementById("hamburgerBtn");
+
+  // user chip
+  document.getElementById("userAvatar").textContent = (session.name || "?").charAt(0).toUpperCase();
+  document.getElementById("userName").textContent = session.name;
+  document.getElementById("userRole").textContent = session.role === "admin" ? "Administrator" : "Staff";
+
+  document.getElementById("logoutBtn").addEventListener("click", function () {
+    clearSession();
+    window.location.href = "index.html";
+  });
+
+  // build nav
+  ROUTES.forEach(function (r) {
+    const a = document.createElement("a");
+    a.href = "#" + r.key;
+    a.className = "nav-item";
+    a.dataset.key = r.key;
+    a.innerHTML = '<span class="nav-icon">' + ICONS[r.key] + '</span><span>' + r.label + '</span>';
+    sidebarNav.appendChild(a);
+  });
+
+  function closeSidebar() {
+    sidebar.classList.remove("open");
+    overlay.classList.remove("show");
+  }
+
+  hamburgerBtn.addEventListener("click", function () {
+    sidebar.classList.toggle("open");
+    overlay.classList.toggle("show");
+  });
+  overlay.addEventListener("click", closeSidebar);
+
+  function currentRouteKey() {
+    const hash = (window.location.hash || "#schedule").replace("#", "");
+    return ROUTES.some((r) => r.key === hash) ? hash : "schedule";
+  }
+
+  function render() {
+    const key = currentRouteKey();
+    const route = ROUTES.find((r) => r.key === key);
+
+    document.querySelectorAll(".nav-item").forEach(function (el) {
+      el.classList.toggle("active", el.dataset.key === key);
+    });
+
+    pageTitle.textContent = route.title;
+    pageSubtitle.textContent = route.subtitle;
+
+    contentEl.innerHTML = "";
+    if (route.module && typeof route.module.render === "function") {
+      route.module.render(contentEl, { session, isAdmin: isAdmin() });
+    } else {
+      contentEl.innerHTML = '<div class="empty-state">Modul belum tersedia.</div>';
+    }
+
+    closeSidebar();
+    window.scrollTo(0, 0);
+  }
+
+  window.addEventListener("hashchange", render);
+  window.addEventListener("DOMContentLoaded", render);
+  render();
+})();
