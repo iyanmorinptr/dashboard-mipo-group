@@ -10,6 +10,8 @@
   }
 
   const ICONS = {
+    home:
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6"/></svg>',
     schedule:
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>',
     finance:
@@ -25,7 +27,8 @@
   };
 
   const ROUTES = [
-    { key: "schedule", label: "Schedule", title: "Schedule", subtitle: "Rancangan jadwal client secara detail", module: ScheduleModule },
+    { key: "home", label: "Home", title: "Home", subtitle: "Jadwal client beserta detail lengkapnya", module: HomeModule },
+    { key: "schedule", label: "Schedule", title: "Schedule", subtitle: "Kelola & edit jadwal client", module: ScheduleModule },
     { key: "finance", label: "Finance", title: "Finance", subtitle: "Kas, pemasukan, pengeluaran, omset & profit perusahaan", module: FinanceModule },
     { key: "invoice", label: "Invoice", title: "Invoice", subtitle: "Pembuatan invoice & rekapan transaksi", module: InvoiceModule },
     { key: "inventory", label: "Inventory", title: "Inventory", subtitle: "Peralatan & perlengkapan milik perusahaan", module: InventoryModule },
@@ -73,8 +76,8 @@
   overlay.addEventListener("click", closeSidebar);
 
   function currentRouteKey() {
-    const hash = (window.location.hash || "#schedule").replace("#", "");
-    return ROUTES.some((r) => r.key === hash) ? hash : "schedule";
+    const hash = (window.location.hash || "#home").replace("#", "");
+    return ROUTES.some((r) => r.key === hash) ? hash : "home";
   }
 
   function render() {
