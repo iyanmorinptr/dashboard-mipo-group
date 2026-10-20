@@ -165,7 +165,10 @@ function createAutoInvoiceFromSchedule(db, schedule, kind) {
     id: uid("inv"),
     number: generateInvoiceNumber(db),
     status: "unpaid",
-    date: schedule.date,
+    // "date" = tanggal pembuatan invoice (tampil di pojok kanan atas kartu
+    // cetak), BUKAN tanggal acara — tanggal acara tetap ditampilkan di
+    // keterangan tiap item lewat buildInvoiceItemsFromSchedule().
+    date: todayISO(),
     client: schedule.client,
     clientPhone: "",
     clientVenue: schedule.location || "",
@@ -216,7 +219,9 @@ function createCombinedInvoiceFromSchedules(db, schedules, overrides) {
     id: uid("inv"),
     number: generateInvoiceNumber(db),
     status: "unpaid",
-    date: overrides.date || schedules[0].date,
+    // "date" = tanggal pembuatan invoice; boleh ditimpa lewat overrides.date
+    // kalau admin isi sendiri di form gabungan, defaultnya hari ini.
+    date: overrides.date || todayISO(),
     client: overrides.client || schedules[0].client,
     clientPhone: "",
     clientVenue: overrides.clientVenue || schedules[0].location || "",
@@ -241,7 +246,6 @@ function syncInvoiceFromSchedule(db, schedule) {
   function refreshIfUnpaid(id) {
     const inv = db.invoices.find(function (i) { return i.id === id; });
     if (inv && inv.status !== "paid") {
-      inv.date = schedule.date;
       inv.client = schedule.client;
       inv.clientVenue = schedule.location || "";
       inv.items = buildInvoiceItemsFromSchedule(schedule);
