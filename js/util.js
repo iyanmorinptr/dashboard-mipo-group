@@ -31,6 +31,34 @@ function confirmAction(message) {
   return window.confirm(message);
 }
 
+function resizeImageToDataUrl(file, maxDim, quality) {
+  maxDim = maxDim || 1000;
+  quality = quality || 0.75;
+  return new Promise(function (resolve, reject) {
+    const reader = new FileReader();
+    reader.onerror = function () { reject(new Error("Gagal membaca file gambar.")); };
+    reader.onload = function () {
+      const img = new Image();
+      img.onerror = function () { reject(new Error("File yang dipilih bukan gambar yang valid.")); };
+      img.onload = function () {
+        let w = img.width;
+        let h = img.height;
+        if (w > maxDim || h > maxDim) {
+          if (w > h) { h = Math.round((h * maxDim) / w); w = maxDim; }
+          else { w = Math.round((w * maxDim) / h); h = maxDim; }
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = w;
+        canvas.height = h;
+        canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL("image/jpeg", quality));
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
 function pricelistOptionsHtml() {
   let html = '<option value="">— Pilih item dari pricelist —</option>';
   PRICELIST.forEach(function (group) {

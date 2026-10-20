@@ -32,3 +32,13 @@ function channelLabel(id) {
   const c = CONTACT_CHANNELS.find(function (x) { return x.id === id; });
   return c ? c.label : "-";
 }
+
+const PAYMENT_STATUSES = [
+  { id: "unpaid", label: "Belum Bayar", pillClass: "pill-grey" },
+  { id: "dp50", label: "DP 50%", pillClass: "pill-blue" },
+  { id: "paid", label: "Lunas", pillClass: "pill-gold" },
+];
+
+function paymentStatusInfo(id) {
+  return PAYMENT_STATUSES.find(function (p) { return p.id === id; }) || PAYMENT_STATUSES[0];
+}

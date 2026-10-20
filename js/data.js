@@ -41,7 +41,8 @@ function seedDB() {
         standbyTime: "08:00",
         staff: "Rangga, Dewi",
         location: "Ballroom Hotel Mulia, Jakarta",
-        paid: false,
+        paymentStatus: "unpaid",
+        proofImage: "",
         contactChannel: "whatsapp",
         notes: "Setup 1 jam sebelum acara dimulai",
       },
@@ -88,7 +89,11 @@ function migrateDB(db) {
       s.menuItems = s.menu ? [{ name: s.menu, qty: 1 }] : [];
     }
     if (!s.brand) s.brand = "koneo";
-    if (s.paid === undefined) s.paid = false;
+    if (!s.paymentStatus) {
+      s.paymentStatus = s.paid ? "paid" : "unpaid";
+    }
+    delete s.paid;
+    if (s.proofImage === undefined) s.proofImage = "";
     if (!s.contactChannel) s.contactChannel = "whatsapp";
     if (s.location === undefined) s.location = "";
   });

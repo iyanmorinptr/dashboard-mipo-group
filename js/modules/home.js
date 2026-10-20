@@ -102,14 +102,16 @@ const HomeModule = (function () {
     function detailCard(s) {
       const todayKey = todayISO();
       const badge = s.date === todayKey ? '<span class="pill pill-gold">Hari Ini</span>' : s.date > todayKey ? '<span class="pill pill-grey">Mendatang</span>' : '<span class="pill pill-grey">Lewat</span>';
-      const paidPill = s.paid ? '<span class="pill pill-gold">Sudah Dibayar</span>' : '<span class="pill pill-grey">Belum Dibayar</span>';
+      const statusInfo = paymentStatusInfo(s.paymentStatus);
+      const paidPill = '<span class="pill ' + statusInfo.pillClass + '">' + escapeHtml(statusInfo.label) + "</span>";
+      const proofThumb = s.proofImage ? '<img class="proof-thumb" src="' + s.proofImage + '" data-view-proof="' + s.id + '" title="Lihat bukti transfer">' : "";
       return (
         '<div class="card" style="margin-bottom:16px; border-left:4px solid ' + brandColor(s.brand) + ';">' +
         '<div style="display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:14px; flex-wrap:wrap;">' +
         '<div><div class="sans" style="font-size:11px; letter-spacing:1px; text-transform:uppercase; color:' + brandColor(s.brand) + '; font-weight:700; margin-bottom:4px;">' + escapeHtml(brandName(s.brand)) + '</div>' +
         '<div style="font-size:18px; margin-bottom:3px;">' + escapeHtml(s.client) + '</div>' +
         '<div class="sans" style="font-size:12.5px; color:var(--muted);">' + formatDate(s.date) + (s.location ? " &middot; " + escapeHtml(s.location) : "") + "</div></div>" +
-        '<div style="display:flex; gap:6px; flex-wrap:wrap;">' + badge + paidPill + "</div>" +
+        '<div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center;">' + badge + paidPill + proofThumb + "</div>" +
         "</div>" +
         '<div class="grid grid-4" style="gap:14px;">' +
         detailField("Menu Yang Keluar", scheduleMenuText(s)) +
@@ -120,6 +122,16 @@ const HomeModule = (function () {
         "</div>" +
         (s.notes ? '<div style="margin-top:14px;"><div class="sans" style="font-size:10.5px; letter-spacing:1px; text-transform:uppercase; color:var(--muted); margin-bottom:5px;">Catatan</div><div style="font-size:13.5px;">' + escapeHtml(s.notes) + "</div></div>" : "") +
         "</div>"
+      );
+    }
+
+    function viewProofImage(src) {
+      openModal(
+        '<h3 style="margin-bottom:14px;">Bukti Transfer</h3><img src="' + src + '" style="width:100%; border-radius:12px; display:block;">' +
+        '<div class="modal-actions"><button type="button" class="btn btn-ghost btn-sm" id="closeProofBtn">Tutup</button></div>',
+        function (modalEl) {
+          modalEl.querySelector("#closeProofBtn").addEventListener("click", closeModal);
+        }
       );
     }
 
@@ -174,6 +186,12 @@ const HomeModule = (function () {
       });
       const clearBtn = container.querySelector("#calClearBtn");
       if (clearBtn) clearBtn.addEventListener("click", function () { selectedDate = null; renderAll(); });
+
+      container.querySelectorAll("[data-view-proof]").forEach(function (img) {
+        img.addEventListener("click", function () {
+          viewProofImage(img.getAttribute("src"));
+        });
+      });
     }
 
     renderAll();

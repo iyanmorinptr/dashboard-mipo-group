@@ -522,6 +522,23 @@ tbody tr:hover { background: rgba(0,0,0,0.02); }
 .pill-green { background: rgba(47,143,78,0.13); color: var(--success); }
 .pill-red { background: rgba(209,69,59,0.11); color: var(--danger); }
 .pill-grey { background: rgba(110,110,115,0.12); color: var(--muted); }
+.pill-blue { background: rgba(37,99,235,0.12); color: #2563eb; }
+
+.proof-thumb {
+  display: inline-block;
+  width: 64px;
+  height: 64px;
+  border-radius: 10px;
+  object-fit: cover;
+  cursor: pointer;
+  border: 1px solid var(--border);
+}
+.proof-upload-preview {
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
 
 .row-actions { display: flex; gap: 8px; }
 .icon-btn {

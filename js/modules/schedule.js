@@ -120,9 +120,23 @@ const ScheduleModule = (function () {
     }
 
     function paymentPill(s) {
-      return s.paid
-        ? '<span class="pill pill-gold">Sudah Dibayar</span>'
-        : '<span class="pill pill-grey">Belum Dibayar</span>';
+      const info = paymentStatusInfo(s.paymentStatus);
+      return '<span class="pill ' + info.pillClass + '">' + escapeHtml(info.label) + "</span>";
+    }
+
+    function proofThumbHtml(s) {
+      if (!s.proofImage) return "";
+      return '<img class="proof-thumb" src="' + s.proofImage + '" data-view-proof="' + s.id + '" title="Lihat bukti transfer">';
+    }
+
+    function viewProofImage(src) {
+      openModal(
+        '<h3 style="margin-bottom:14px;">Bukti Transfer</h3><img src="' + src + '" style="width:100%; border-radius:12px; display:block;">' +
+        '<div class="modal-actions"><button type="button" class="btn btn-ghost btn-sm" id="closeProofBtn">Tutup</button></div>',
+        function (modalEl) {
+          modalEl.querySelector("#closeProofBtn").addEventListener("click", closeModal);
+        }
+      );
     }
 
     function detailCard(s) {
@@ -132,7 +146,7 @@ const ScheduleModule = (function () {
         '<div><div class="sans" style="font-size:11px; letter-spacing:1px; text-transform:uppercase; color:' + brandColor(s.brand) + '; font-weight:700; margin-bottom:4px;">' + escapeHtml(brandName(s.brand)) + '</div>' +
         '<div style="font-size:18px; margin-bottom:3px;">' + escapeHtml(s.client) + '</div>' +
         '<div class="sans" style="font-size:12.5px; color:var(--muted);">' + formatDate(s.date) + (s.location ? " &middot; " + escapeHtml(s.location) : "") + "</div></div>" +
-        '<div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center;">' + paymentPill(s) +
+        '<div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center;">' + paymentPill(s) + proofThumbHtml(s) +
           (canEdit
             ? '<button class="icon-btn" data-edit="' + s.id + '">Edit</button>' +
               '<button class="icon-btn danger" data-del="' + s.id + '">Hapus</button>'
@@ -189,6 +203,12 @@ const ScheduleModule = (function () {
       }).join("");
     }
 
+    function paymentStatusOptionsHtml(selected) {
+      return PAYMENT_STATUSES.map(function (p) {
+        return '<option value="' + p.id + '"' + (p.id === selected ? " selected" : "") + ">" + escapeHtml(p.label) + "</option>";
+      }).join("");
+    }
+
     function formHtml(existing, prefillDate) {
       const s = existing || {
         date: prefillDate || todayISO(),
@@ -198,7 +218,8 @@ const ScheduleModule = (function () {
         standbyTime: "",
         staff: "",
         location: "",
-        paid: false,
+        paymentStatus: "unpaid",
+        proofImage: "",
         contactChannel: "whatsapp",
         notes: "",
       };
@@ -217,8 +238,17 @@ const ScheduleModule = (function () {
           field("Jam Ready Di Lokasi", "standbyTime", "time", s.standbyTime, true) +
           field("Staff In Charge", "staff", "text", s.staff, true, "Pisahkan dengan koma") +
           selectField("Hub Via", "contactChannel", channelOptionsHtml(s.contactChannel)) +
-          checkboxField("Checklist Pembayaran", "paid", s.paid) +
+          selectField("Checklist Pembayaran", "paymentStatus", paymentStatusOptionsHtml(s.paymentStatus)) +
           fieldFull("Catatan Tambahan", "notes", s.notes, false, true) +
+        "</div>" +
+        '<div style="margin-top:18px;"><label class="sans" style="display:block; font-size:11px; letter-spacing:1px; text-transform:uppercase; color:var(--muted); margin-bottom:9px;">Bukti Transfer</label>' +
+        '<input type="file" id="proofImageInput" accept="image/*">' +
+        '<div class="proof-upload-preview" id="proofPreviewWrap">' +
+          (s.proofImage
+            ? '<img class="proof-thumb" id="proofPreviewImg" src="' + s.proofImage + '">' +
+              '<button type="button" class="icon-btn danger" id="removeProofBtn">Hapus Bukti</button>'
+            : '<img class="proof-thumb" id="proofPreviewImg" src="" style="display:none;">') +
+        "</div>" +
         "</div>" +
         '<div style="margin-top:18px;"><label class="sans" style="display:block; font-size:11px; letter-spacing:1px; text-transform:uppercase; color:var(--muted); margin-bottom:9px;">Menu Yang Keluar</label>' +
         '<div id="menuItemsWrap">' + menuItemsHtml + "</div>" +
@@ -250,16 +280,6 @@ const ScheduleModule = (function () {
       );
     }
 
-    function checkboxField(label, name, checked) {
-      return (
-        '<div class="form-field"><label>' + escapeHtml(label) + "</label>" +
-        '<label style="display:flex; align-items:center; gap:8px; font-size:13px; font-weight:400; cursor:pointer;">' +
-        '<input type="checkbox" name="' + name + '" ' + (checked ? "checked" : "") + ' style="width:auto;"> Sudah dibayar' +
-        "</label>" +
-        "</div>"
-      );
-    }
-
     function fieldFull(label, name, value, required, textarea) {
       return (
         '<div class="form-field full"><label>' + escapeHtml(label) + "</label>" +
@@ -272,9 +292,50 @@ const ScheduleModule = (function () {
 
     function openForm(existing, prefillDate) {
       let menuRowCount = existing && existing.menuItems ? existing.menuItems.length : 1;
+      let pendingProofImage = (existing && existing.proofImage) || "";
       openModal(formHtml(existing, prefillDate), function (modalEl) {
         modalEl.querySelector("#cancelBtn").addEventListener("click", closeModal);
         const menuItemsWrap = modalEl.querySelector("#menuItemsWrap");
+
+        const proofInput = modalEl.querySelector("#proofImageInput");
+        const proofPreviewImg = modalEl.querySelector("#proofPreviewImg");
+        const proofPreviewWrap = modalEl.querySelector("#proofPreviewWrap");
+
+        function bindRemoveProofBtn() {
+          const removeBtn = modalEl.querySelector("#removeProofBtn");
+          if (removeBtn) {
+            removeBtn.onclick = function () {
+              pendingProofImage = "";
+              proofPreviewImg.src = "";
+              proofPreviewImg.style.display = "none";
+              removeBtn.remove();
+            };
+          }
+        }
+        bindRemoveProofBtn();
+
+        proofInput.addEventListener("change", function () {
+          const file = proofInput.files && proofInput.files[0];
+          if (!file) return;
+          resizeImageToDataUrl(file, 1000, 0.75)
+            .then(function (dataUrl) {
+              pendingProofImage = dataUrl;
+              proofPreviewImg.src = dataUrl;
+              proofPreviewImg.style.display = "";
+              if (!modalEl.querySelector("#removeProofBtn")) {
+                const btn = document.createElement("button");
+                btn.type = "button";
+                btn.className = "icon-btn danger";
+                btn.id = "removeProofBtn";
+                btn.textContent = "Hapus Bukti";
+                proofPreviewWrap.appendChild(btn);
+                bindRemoveProofBtn();
+              }
+            })
+            .catch(function (err) {
+              window.alert(err.message || "Gagal memproses gambar.");
+            });
+        });
 
         modalEl.querySelector("#addMenuItemRow").addEventListener("click", function () {
           const div = document.createElement("div");
@@ -325,7 +386,8 @@ const ScheduleModule = (function () {
             staff: data.staff,
             location: data.location || "",
             contactChannel: data.contactChannel,
-            paid: !!data.paid,
+            paymentStatus: data.paymentStatus,
+            proofImage: pendingProofImage,
             notes: data.notes || "",
             menuItems: menuItems,
           };
@@ -400,6 +462,11 @@ const ScheduleModule = (function () {
           db.schedules = db.schedules.filter((s) => s.id !== btn.dataset.del);
           saveDB(db);
           renderAll();
+        });
+      });
+      container.querySelectorAll("[data-view-proof]").forEach(function (img) {
+        img.addEventListener("click", function () {
+          viewProofImage(img.getAttribute("src"));
         });
       });
     }
