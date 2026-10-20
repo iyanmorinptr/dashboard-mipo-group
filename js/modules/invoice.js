@@ -15,11 +15,14 @@ const InvoiceModule = (function () {
     const canEdit = ctx.isAdmin;
 
     function nextInvoiceNumber() {
-      const now = new Date();
-      const y = now.getFullYear();
-      const m = String(now.getMonth() + 1).padStart(2, "0");
-      const countThisMonth = db.invoices.filter((i) => i.number.includes("/" + y + "/" + m + "/")).length + 1;
-      return "INV/" + y + "/" + m + "/" + String(countThisMonth).padStart(3, "0");
+      return generateInvoiceNumber(db);
+    }
+
+    function invoiceKindPill(inv) {
+      if (inv.invoiceKind === "dp") return '<span class="pill pill-blue">Auto · DP 50%</span>';
+      if (inv.invoiceKind === "pelunasan") return '<span class="pill pill-blue">Auto · Pelunasan</span>';
+      if (inv.invoiceKind === "full") return '<span class="pill pill-blue">Auto · Dari Jadwal</span>';
+      return "";
     }
 
     function statCards() {
@@ -48,7 +51,7 @@ const InvoiceModule = (function () {
           const total = invoiceTotal(inv);
           return (
             "<tr>" +
-            "<td><strong>" + escapeHtml(inv.number) + "</strong></td>" +
+            "<td><strong>" + escapeHtml(inv.number) + "</strong>" + (invoiceKindPill(inv) ? "<br>" + invoiceKindPill(inv) : "") + "</td>" +
             "<td>" + formatDate(inv.date) + "</td>" +
             "<td>" + escapeHtml(inv.client) + "</td>" +
             "<td>" + formatIDR(total) + "</td>" +
@@ -184,7 +187,7 @@ const InvoiceModule = (function () {
           if (existing) {
             Object.assign(existing, payload);
           } else {
-            db.invoices.push(Object.assign({ id: uid("inv"), status: "unpaid" }, payload));
+            db.invoices.push(Object.assign({ id: uid("inv"), status: "unpaid", invoiceKind: "manual", scheduleId: null }, payload));
           }
           saveDB(db);
           closeModal();
@@ -199,6 +202,8 @@ const InvoiceModule = (function () {
       const dpPercent = inv.dpPercent || 0;
       const dpAmount = Math.round((subtotal * dpPercent) / 100);
       const ci = db.companyInfo || {};
+      const paymentLabel =
+        dpPercent >= 100 ? "Total Pembayaran" : inv.invoiceKind === "pelunasan" ? "Pelunasan " + dpPercent + "%" : "Dp " + dpPercent + "%";
 
       const rows = inv.items
         .map(function (it, idx) {
@@ -258,7 +263,7 @@ const InvoiceModule = (function () {
           '<div style="display:flex; justify-content:flex-end; margin-top:6px;">' +
             '<table style="border-collapse:collapse; font-size:14px; min-width:220px;">' +
               '<tr style="border-top:1.5px solid #111;"><td style="padding:12px 20px 12px 0; font-weight:700; border-bottom:none;">Subtotal</td><td style="padding:12px 0; text-align:right; border-bottom:none;">' + formatNumberID(subtotal) + "</td></tr>" +
-              '<tr style="border-top:1.5px solid #111;"><td style="padding:12px 20px 0 0; font-weight:800; font-size:16px; border-bottom:none;">Dp ' + dpPercent + '%</td><td style="padding:12px 0 0; text-align:right; font-weight:800; font-size:20px; border-bottom:none;">' + formatNumberID(dpAmount) + "</td></tr>" +
+              '<tr style="border-top:1.5px solid #111;"><td style="padding:12px 20px 0 0; font-weight:800; font-size:16px; border-bottom:none;">' + escapeHtml(paymentLabel) + '</td><td style="padding:12px 0 0; text-align:right; font-weight:800; font-size:20px; border-bottom:none;">' + formatNumberID(dpAmount) + "</td></tr>" +
             "</table>" +
           "</div>" +
 

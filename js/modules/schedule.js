@@ -124,6 +124,24 @@ const ScheduleModule = (function () {
       return '<span class="pill ' + info.pillClass + '">' + escapeHtml(info.label) + "</span>";
     }
 
+    function invoiceLinksHtml(s) {
+      const parts = [];
+      if (s.invoiceId) {
+        const inv = db.invoices.find(function (i) { return i.id === s.invoiceId; });
+        if (inv) {
+          const label = inv.invoiceKind === "full" ? "Invoice Lunas" : "Invoice DP 50%";
+          parts.push('<button type="button" class="icon-btn" data-goto-invoice="' + inv.id + '">' + escapeHtml(label) + " (" + escapeHtml(inv.number) + ")</button>");
+        }
+      }
+      if (s.pelunasanInvoiceId) {
+        const inv2 = db.invoices.find(function (i) { return i.id === s.pelunasanInvoiceId; });
+        if (inv2) {
+          parts.push('<button type="button" class="icon-btn" data-goto-invoice="' + inv2.id + '">Invoice Pelunasan (' + escapeHtml(inv2.number) + ")</button>");
+        }
+      }
+      return parts.length ? '<div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:10px;">' + parts.join("") + "</div>" : "";
+    }
+
     function proofThumbHtml(s) {
       if (!s.proofImage) return "";
       return '<img class="proof-thumb" src="' + s.proofImage + '" data-view-proof="' + s.id + '" title="Lihat bukti transfer">';
@@ -161,6 +179,7 @@ const ScheduleModule = (function () {
         detailField("Hub Via", channelLabel(s.contactChannel)) +
         "</div>" +
         (s.notes ? '<div style="margin-top:14px;"><div class="sans" style="font-size:10.5px; letter-spacing:1px; text-transform:uppercase; color:var(--muted); margin-bottom:5px;">Catatan</div><div style="font-size:13.5px;">' + escapeHtml(s.notes) + "</div></div>" : "") +
+        invoiceLinksHtml(s) +
         "</div>"
       );
     }
@@ -392,11 +411,15 @@ const ScheduleModule = (function () {
             menuItems: menuItems,
           };
 
+          let scheduleRecord;
           if (existing) {
             Object.assign(existing, payload);
+            scheduleRecord = existing;
           } else {
-            db.schedules.push(Object.assign({ id: uid("sch") }, payload));
+            scheduleRecord = Object.assign({ id: uid("sch") }, payload);
+            db.schedules.push(scheduleRecord);
           }
+          syncInvoiceFromSchedule(db, scheduleRecord);
           saveDB(db);
           closeModal();
           selectedDate = payload.date;
@@ -467,6 +490,11 @@ const ScheduleModule = (function () {
       container.querySelectorAll("[data-view-proof]").forEach(function (img) {
         img.addEventListener("click", function () {
           viewProofImage(img.getAttribute("src"));
+        });
+      });
+      container.querySelectorAll("[data-goto-invoice]").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          window.location.hash = "#invoice";
         });
       });
     }

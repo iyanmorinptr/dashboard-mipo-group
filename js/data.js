@@ -81,6 +81,8 @@ function migrateDB(db) {
     if (inv.clientPhone === undefined) inv.clientPhone = "";
     if (inv.clientVenue === undefined) inv.clientVenue = "";
     if (inv.dpPercent === undefined) inv.dpPercent = 50;
+    if (!inv.invoiceKind) inv.invoiceKind = "manual";
+    if (inv.scheduleId === undefined) inv.scheduleId = null;
   });
   db.schedules.forEach(function (s) {
     // Data lama menyimpan menu sebagai satu string bebas ("menu"); versi
@@ -96,6 +98,8 @@ function migrateDB(db) {
     if (s.proofImage === undefined) s.proofImage = "";
     if (!s.contactChannel) s.contactChannel = "whatsapp";
     if (s.location === undefined) s.location = "";
+    if (s.invoiceId === undefined) s.invoiceId = null;
+    if (s.pelunasanInvoiceId === undefined) s.pelunasanInvoiceId = null;
   });
   return db;
 }
@@ -110,6 +114,95 @@ function scheduleMenuText(s) {
       .join(", ");
   }
   return s.menu || "-";
+}
+
+/* ---------- Sinkronisasi otomatis: Schedule -> Invoice -> Finance ----------
+   Saat jadwal disimpan, invoice terkait dibuat/diperbarui otomatis sesuai
+   status pembayarannya (DP 50% -> invoice DP, Lunas -> invoice pelunasan
+   terpisah bila sebelumnya sudah ada DP, atau invoice lunas penuh bila
+   langsung lunas). Pembuatan invoice manual tetap tersedia seperti biasa
+   di menu Invoice (invoiceKind "manual"), dan pencatatan ke Finance tetap
+   hanya terjadi saat invoice ditandai lunas (lihat markPaid() di
+   js/modules/invoice.js) — input manual di Finance juga tidak berubah.
+   =========================================================== */
+
+function generateInvoiceNumber(db) {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, "0");
+  const countThisMonth = db.invoices.filter(function (i) {
+    return i.number.includes("/" + y + "/" + m + "/");
+  }).length + 1;
+  return "INV/" + y + "/" + m + "/" + String(countThisMonth).padStart(3, "0");
+}
+
+function pricelistPriceFor(name) {
+  const list = typeof PRICELIST !== "undefined" ? PRICELIST : [];
+  let found = 0;
+  list.some(function (group) {
+    const item = (group.items || []).find(function (it) { return it.name === name; });
+    if (item) {
+      found = item.price;
+      return true;
+    }
+    return false;
+  });
+  return found;
+}
+
+function buildInvoiceItemsFromSchedule(schedule) {
+  return (schedule.menuItems || []).map(function (mi) {
+    return { desc: mi.name, qty: Number(mi.qty) || 1, price: pricelistPriceFor(mi.name) };
+  });
+}
+
+function createAutoInvoiceFromSchedule(db, schedule, kind) {
+  const dpPercent = kind === "full" ? 100 : 50;
+  const inv = {
+    id: uid("inv"),
+    number: generateInvoiceNumber(db),
+    status: "unpaid",
+    date: schedule.date,
+    client: schedule.client,
+    clientPhone: "",
+    clientVenue: schedule.location || "",
+    dpPercent: dpPercent,
+    items: buildInvoiceItemsFromSchedule(schedule),
+    scheduleId: schedule.id,
+    invoiceKind: kind,
+  };
+  db.invoices.push(inv);
+  return inv.id;
+}
+
+function syncInvoiceFromSchedule(db, schedule) {
+  if (!schedule.menuItems || !schedule.menuItems.length) return;
+
+  function refreshIfUnpaid(id) {
+    const inv = db.invoices.find(function (i) { return i.id === id; });
+    if (inv && inv.status !== "paid") {
+      inv.date = schedule.date;
+      inv.client = schedule.client;
+      inv.clientVenue = schedule.location || "";
+      inv.items = buildInvoiceItemsFromSchedule(schedule);
+    }
+    return inv;
+  }
+
+  const dpInvoice = schedule.invoiceId ? refreshIfUnpaid(schedule.invoiceId) : null;
+  if (schedule.pelunasanInvoiceId) refreshIfUnpaid(schedule.pelunasanInvoiceId);
+
+  if (schedule.paymentStatus === "dp50" && !schedule.invoiceId) {
+    schedule.invoiceId = createAutoInvoiceFromSchedule(db, schedule, "dp");
+  } else if (schedule.paymentStatus === "paid") {
+    if (dpInvoice && dpInvoice.invoiceKind === "dp") {
+      if (!schedule.pelunasanInvoiceId) {
+        schedule.pelunasanInvoiceId = createAutoInvoiceFromSchedule(db, schedule, "pelunasan");
+      }
+    } else if (!schedule.invoiceId) {
+      schedule.invoiceId = createAutoInvoiceFromSchedule(db, schedule, "full");
+    }
+  }
 }
 
 /* ---------- Firestore-backed data store ---------- */
