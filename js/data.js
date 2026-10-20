@@ -31,6 +31,7 @@ function seedDB() {
       {
         id: uid("sch"),
         date: todayISO(),
+        brand: "koneo",
         client: "PT Sinar Abadi",
         menuItems: [
           { name: "Koneo Vanilla Based - 100 Portions", qty: 1 },
@@ -40,6 +41,8 @@ function seedDB() {
         standbyTime: "08:00",
         staff: "Rangga, Dewi",
         location: "Ballroom Hotel Mulia, Jakarta",
+        paid: false,
+        contactChannel: "whatsapp",
         notes: "Setup 1 jam sebelum acara dimulai",
       },
     ],
@@ -84,6 +87,10 @@ function migrateDB(db) {
     if (!s.menuItems) {
       s.menuItems = s.menu ? [{ name: s.menu, qty: 1 }] : [];
     }
+    if (!s.brand) s.brand = "koneo";
+    if (s.paid === undefined) s.paid = false;
+    if (!s.contactChannel) s.contactChannel = "whatsapp";
+    if (s.location === undefined) s.location = "";
   });
   return db;
 }

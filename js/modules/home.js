@@ -60,13 +60,22 @@ const HomeModule = (function () {
       }
       for (let d = 1; d <= daysInMonth; d++) {
         const key = dateKey(viewYear, viewMonth, d);
-        const hasSchedule = !!map[key];
+        const entries = map[key] || [];
+        const brandIds = entries.reduce(function (acc, s) {
+          if (acc.indexOf(s.brand) === -1) acc.push(s.brand);
+          return acc;
+        }, []);
         const isToday = key === todayKey;
         const isSelected = key === selectedDate;
+        const dots = brandIds
+          .map(function (bid) {
+            return '<span class="dot" style="background:' + brandColor(bid) + ';"></span>';
+          })
+          .join("");
         cells +=
           '<div class="calendar-day' + (isToday ? " today" : "") + (isSelected ? " selected" : "") + '" data-date="' + key + '">' +
           "<span>" + d + "</span>" +
-          (hasSchedule ? '<span class="dot"></span>' : "") +
+          (dots ? '<span class="dot-row">' + dots + "</span>" : "") +
           "</div>";
       }
 
@@ -93,18 +102,21 @@ const HomeModule = (function () {
     function detailCard(s) {
       const todayKey = todayISO();
       const badge = s.date === todayKey ? '<span class="pill pill-gold">Hari Ini</span>' : s.date > todayKey ? '<span class="pill pill-grey">Mendatang</span>' : '<span class="pill pill-grey">Lewat</span>';
+      const paidPill = s.paid ? '<span class="pill pill-gold">Sudah Dibayar</span>' : '<span class="pill pill-grey">Belum Dibayar</span>';
       return (
-        '<div class="card" style="margin-bottom:16px;">' +
-        '<div style="display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:14px;">' +
-        '<div><div style="font-size:18px; margin-bottom:3px;">' + escapeHtml(s.client) + '</div>' +
+        '<div class="card" style="margin-bottom:16px; border-left:4px solid ' + brandColor(s.brand) + ';">' +
+        '<div style="display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:14px; flex-wrap:wrap;">' +
+        '<div><div class="sans" style="font-size:11px; letter-spacing:1px; text-transform:uppercase; color:' + brandColor(s.brand) + '; font-weight:700; margin-bottom:4px;">' + escapeHtml(brandName(s.brand)) + '</div>' +
+        '<div style="font-size:18px; margin-bottom:3px;">' + escapeHtml(s.client) + '</div>' +
         '<div class="sans" style="font-size:12.5px; color:var(--muted);">' + formatDate(s.date) + (s.location ? " &middot; " + escapeHtml(s.location) : "") + "</div></div>" +
-        badge +
+        '<div style="display:flex; gap:6px; flex-wrap:wrap;">' + badge + paidPill + "</div>" +
         "</div>" +
         '<div class="grid grid-4" style="gap:14px;">' +
         detailField("Menu Yang Keluar", scheduleMenuText(s)) +
         detailField("Jam Keberangkatan", s.departureTime) +
-        detailField("Jam Standby Di Lokasi", s.standbyTime) +
+        detailField("Jam Ready Di Lokasi", s.standbyTime) +
         detailField("Staff In Charge", s.staff) +
+        detailField("Hub Via", channelLabel(s.contactChannel)) +
         "</div>" +
         (s.notes ? '<div style="margin-top:14px;"><div class="sans" style="font-size:10.5px; letter-spacing:1px; text-transform:uppercase; color:var(--muted); margin-bottom:5px;">Catatan</div><div style="font-size:13.5px;">' + escapeHtml(s.notes) + "</div></div>" : "") +
         "</div>"

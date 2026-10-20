@@ -592,6 +592,76 @@ tbody tr:hover { background: rgba(0,0,0,0.02); }
   background: var(--gold);
 }
 .calendar-day.selected .dot { background: var(--white); }
+.calendar-day .dot-row {
+  position: absolute;
+  bottom: 5px;
+  display: flex;
+  gap: 3px;
+}
+.calendar-day .dot-row .dot {
+  position: static;
+}
+
+/* ---------- Calendar (Schedule — rich, dengan chip per brand) ---------- */
+.cal-day-rich {
+  aspect-ratio: auto;
+  height: 68px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  padding: 6px 4px;
+  gap: 4px;
+}
+.cal-day-rich .cal-daynum {
+  font-size: 12px;
+  text-align: center;
+}
+.cal-day-rich.other-month { visibility: hidden; }
+.cal-day-rich.today .cal-daynum { font-weight: 700; color: #8a6a34; }
+.cal-day-rich.selected { background: rgba(197, 160, 89, 0.16); }
+.cal-day-rich.selected .cal-daynum { color: var(--ink); font-weight: 700; }
+.cal-chips {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  align-items: stretch;
+}
+.cal-chip {
+  height: 5px;
+  border-radius: 3px;
+  width: 100%;
+}
+.cal-more {
+  font-size: 9px;
+  color: var(--muted);
+  text-align: center;
+  line-height: 1;
+}
+.cal-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+  font-size: 12px;
+  color: var(--muted);
+}
+.cal-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.cal-legend-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  display: inline-block;
+}
+@media (max-width: 640px) {
+  .cal-day-rich { height: 54px; }
+}
 
 /* ---------- Toolbar ---------- */
 .toolbar {
