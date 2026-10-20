@@ -11,14 +11,18 @@ const ScheduleModule = (function () {
   const MONTH_NAMES = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
   const DAY_NAMES = ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"];
 
+  // Posisi kalender (bulan/tahun yang dilihat & tanggal terpilih) disimpan
+  // di luar render() supaya TIDAK ikut ter-reset ke bulan sekarang setiap
+  // kali data tersinkron ulang dari Firestore (real-time) atau saat
+  // berpindah menu lalu kembali lagi ke Schedule.
+  const today = new Date();
+  let viewYear = today.getFullYear();
+  let viewMonth = today.getMonth();
+  let selectedDate = todayISO();
+
   function render(container, ctx) {
     const db = loadDB();
     const canEdit = ctx.isAdmin;
-
-    const today = new Date();
-    let viewYear = today.getFullYear();
-    let viewMonth = today.getMonth();
-    let selectedDate = todayISO();
 
     function pad(n) {
       return String(n).padStart(2, "0");

@@ -9,12 +9,15 @@ const HomeModule = (function () {
   const MONTH_NAMES = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
   const DAY_NAMES = ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"];
 
+  // Di luar render() supaya posisi bulan/tanggal terpilih tidak ter-reset
+  // setiap kali data tersinkron ulang dari Firestore atau berpindah menu.
+  const today = new Date();
+  let viewYear = today.getFullYear();
+  let viewMonth = today.getMonth(); // 0-indexed
+  let selectedDate = null; // "YYYY-MM-DD" atau null (tampilkan semua)
+
   function render(container, ctx) {
     const db = loadDB();
-    const today = new Date();
-    let viewYear = today.getFullYear();
-    let viewMonth = today.getMonth(); // 0-indexed
-    let selectedDate = null; // "YYYY-MM-DD" atau null (tampilkan semua)
 
     function pad(n) {
       return String(n).padStart(2, "0");

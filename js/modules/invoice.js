@@ -10,6 +10,8 @@
    =========================================================== */
 
 const InvoiceModule = (function () {
+  let _activeFitHandler = null;
+
   function render(container, ctx) {
     const db = loadDB();
     const canEdit = ctx.isAdmin;
@@ -295,14 +297,25 @@ const InvoiceModule = (function () {
     function captureCardToBlob() {
       const el = document.getElementById("invoiceCardCapture");
       if (!el || typeof html2canvas !== "function") return Promise.reject(new Error("html2canvas tidak tersedia"));
-      return html2canvas(el, { scale: 2, backgroundColor: "#e9e8e6", useCORS: true }).then(function (canvas) {
-        return new Promise(function (resolve, reject) {
-          canvas.toBlob(function (blob) {
-            if (blob) resolve(blob);
-            else reject(new Error("Gagal membuat gambar"));
-          }, "image/png");
+      // Pratinjau di layar diperkecil (transform:scale) agar pas tanpa harus
+      // digeser — tapi saat diekspor harus dikembalikan dulu ke ukuran asli
+      // supaya hasil gambarnya tetap berproporsi A4 penuh, bukan versi kecil.
+      const prevTransform = el.style.transform;
+      el.style.transform = "none";
+      return html2canvas(el, { scale: 2, backgroundColor: "#e9e8e6", useCORS: true })
+        .then(function (canvas) {
+          el.style.transform = prevTransform;
+          return new Promise(function (resolve, reject) {
+            canvas.toBlob(function (blob) {
+              if (blob) resolve(blob);
+              else reject(new Error("Gagal membuat gambar"));
+            }, "image/png");
+          });
+        })
+        .catch(function (err) {
+          el.style.transform = prevTransform;
+          throw err;
         });
-      });
     }
 
     function downloadBlob(blob, filename) {
@@ -318,7 +331,9 @@ const InvoiceModule = (function () {
 
     function viewInvoice(inv) {
       openModal(
-        '<div id="invoiceModalScroll" style="border-radius:22px 22px 0 0; display:flex; justify-content:center; background:#e9e8e6; overflow-x:auto; -webkit-overflow-scrolling:touch;">' + invoiceCardHtml(inv) + "</div>" +
+        '<div id="invoiceModalScroll" style="border-radius:22px 22px 0 0; display:flex; justify-content:center; background:#e9e8e6; padding:16px 0;">' +
+          '<div id="invoiceScaleWrap" style="width:100%; display:flex; justify-content:center;">' + invoiceCardHtml(inv) + "</div>" +
+        "</div>" +
         '<div class="modal-actions" style="padding:18px 28px 24px; margin:0; border-top:1px solid var(--border); background:var(--white); flex-wrap:wrap;">' +
           '<button type="button" class="btn btn-ghost btn-sm" id="closeViewBtn">Tutup</button>' +
           '<button type="button" class="btn btn-outline btn-sm" id="downloadPngBtn">Unduh PNG</button>' +
@@ -331,6 +346,24 @@ const InvoiceModule = (function () {
           modalBox.style.overflow = "hidden";
           modalEl.scrollTop = 0;
           modalEl.querySelector("#closeViewBtn").addEventListener("click", closeModal);
+
+          // Perkecil kartu invoice (CSS transform) supaya pas terlihat
+          // utuh di layar tanpa perlu digeser/di-zoom manual — ukuran asli
+          // A4-nya tetap dipertahankan saat diekspor (lihat captureCardToBlob).
+          function fitInvoiceCard() {
+            const wrap = modalEl.querySelector("#invoiceScaleWrap");
+            const card = document.getElementById("invoiceCardCapture");
+            if (!wrap || !card) return;
+            const available = wrap.clientWidth - 24;
+            const scale = Math.min(1, available / 794);
+            card.style.transform = "scale(" + scale + ")";
+            card.style.transformOrigin = "top center";
+            wrap.style.height = Math.round(1123 * scale) + "px";
+          }
+          fitInvoiceCard();
+          if (_activeFitHandler) window.removeEventListener("resize", _activeFitHandler);
+          _activeFitHandler = fitInvoiceCard;
+          window.addEventListener("resize", _activeFitHandler);
 
           const downloadBtn = modalEl.querySelector("#downloadPngBtn");
           const shareBtn = modalEl.querySelector("#shareWaBtn");
