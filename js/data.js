@@ -153,8 +153,9 @@ function pricelistPriceFor(name) {
 }
 
 function buildInvoiceItemsFromSchedule(schedule) {
+  const datePrefix = formatInvoiceDate(schedule.date) + " ";
   return (schedule.menuItems || []).map(function (mi) {
-    return { desc: mi.name, qty: Number(mi.qty) || 1, price: pricelistPriceFor(mi.name) };
+    return { desc: datePrefix + mi.name, qty: Number(mi.qty) || 1, price: pricelistPriceFor(mi.name) };
   });
 }
 
@@ -184,8 +185,9 @@ function refreshCombinedInvoiceItems(db, invoiceId) {
   if (!members.length) return;
   const items = [];
   members.forEach(function (s) {
+    const datePrefix = formatInvoiceDate(s.date) + " ";
     (s.menuItems || []).forEach(function (mi) {
-      items.push({ desc: "[" + brandName(s.brand) + "] " + mi.name, qty: Number(mi.qty) || 1, price: pricelistPriceFor(mi.name) });
+      items.push({ desc: datePrefix + mi.name, qty: Number(mi.qty) || 1, price: pricelistPriceFor(mi.name) });
     });
   });
   inv.items = items;
@@ -195,8 +197,9 @@ function createCombinedInvoiceFromSchedules(db, schedules, overrides) {
   overrides = overrides || {};
   const items = [];
   schedules.forEach(function (s) {
+    const datePrefix = formatInvoiceDate(s.date) + " ";
     (s.menuItems || []).forEach(function (mi) {
-      items.push({ desc: "[" + brandName(s.brand) + "] " + mi.name, qty: Number(mi.qty) || 1, price: pricelistPriceFor(mi.name) });
+      items.push({ desc: datePrefix + mi.name, qty: Number(mi.qty) || 1, price: pricelistPriceFor(mi.name) });
     });
     // Hapus invoice otomatis per-brand yang lama (kalau belum lunas) supaya
     // client tidak menerima invoice ganda untuk jadwal yang sama.
