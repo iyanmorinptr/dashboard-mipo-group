@@ -468,7 +468,7 @@ const ScheduleModule = (function () {
         '<div class="form-grid">' +
           field("Nama Client Pada Invoice", "client", "text", eligible[0].client, true) +
           field("Lokasi / Venue", "clientVenue", "text", eligible[0].location, false) +
-          field("Tanggal Invoice", "date", "date", eligible[0].date, true) +
+          field("Tanggal Pembuatan Invoice", "date", "date", todayISO(), true) +
         "</div>" +
         '<div class="modal-actions"><button type="button" class="btn btn-ghost btn-sm" id="cancelCombineBtn">Batal</button><button type="submit" class="btn btn-sm" style="width:auto;">Buat Invoice Gabungan</button></div>' +
         "</form>",
