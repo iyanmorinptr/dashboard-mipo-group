@@ -125,6 +125,16 @@ const ScheduleModule = (function () {
     }
 
     function invoiceLinksHtml(s) {
+      if (s.combinedInvoiceId) {
+        const combined = db.invoices.find(function (i) { return i.id === s.combinedInvoiceId; });
+        if (combined) {
+          return (
+            '<div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:10px;">' +
+            '<button type="button" class="icon-btn" data-goto-invoice="' + combined.id + '">Invoice Gabungan (' + escapeHtml(combined.number) + ")</button>" +
+            "</div>"
+          );
+        }
+      }
       const parts = [];
       if (s.invoiceId) {
         const inv = db.invoices.find(function (i) { return i.id === s.invoiceId; });
@@ -428,6 +438,60 @@ const ScheduleModule = (function () {
       });
     }
 
+    function openCombineForm(entries) {
+      const eligible = entries.filter(function (s) { return !s.combinedInvoiceId; });
+      if (eligible.length < 2) {
+        window.alert("Pilih tanggal yang memiliki minimal 2 jadwal (brand berbeda) yang belum digabung untuk membuat satu invoice gabungan.");
+        return;
+      }
+      const checkboxesHtml = eligible
+        .map(function (s) {
+          return (
+            '<label style="display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px dashed var(--border); font-weight:400; font-size:13px;">' +
+            '<input type="checkbox" name="combine_' + s.id + '" checked style="width:auto;">' +
+            '<span style="width:10px; height:10px; border-radius:50%; background:' + brandColor(s.brand) + '; display:inline-block; flex-shrink:0;"></span>' +
+            "<span>" + escapeHtml(brandName(s.brand)) + " — " + escapeHtml(s.client) + " (" + escapeHtml(scheduleMenuText(s)) + ")</span>" +
+            "</label>"
+          );
+        })
+        .join("");
+
+      openModal(
+        "<h3>Gabungkan Jadi 1 Invoice</h3>" +
+        '<p class="modal-sub">Pilih minimal 2 jadwal yang ingin digabung jadi satu invoice — cocok saat satu client memesan beberapa brand sekaligus supaya tidak perlu mengirim invoice terpisah.</p>' +
+        '<form id="combineForm">' +
+        '<div style="margin-bottom:14px;">' + checkboxesHtml + "</div>" +
+        '<div class="form-grid">' +
+          field("Nama Client Pada Invoice", "client", "text", eligible[0].client, true) +
+          field("Lokasi / Venue", "clientVenue", "text", eligible[0].location, false) +
+          field("Tanggal Invoice", "date", "date", eligible[0].date, true) +
+        "</div>" +
+        '<div class="modal-actions"><button type="button" class="btn btn-ghost btn-sm" id="cancelCombineBtn">Batal</button><button type="submit" class="btn btn-sm" style="width:auto;">Buat Invoice Gabungan</button></div>' +
+        "</form>",
+        function (modalEl) {
+          modalEl.querySelector("#cancelCombineBtn").addEventListener("click", closeModal);
+          modalEl.querySelector("#combineForm").addEventListener("submit", function (e) {
+            e.preventDefault();
+            const fd = new FormData(e.target);
+            const obj = Object.fromEntries(fd.entries());
+            const selected = eligible.filter(function (s) { return fd.get("combine_" + s.id); });
+            if (selected.length < 2) {
+              window.alert("Pilih minimal 2 jadwal untuk digabung.");
+              return;
+            }
+            createCombinedInvoiceFromSchedules(db, selected, {
+              client: obj.client,
+              clientVenue: obj.clientVenue,
+              date: obj.date,
+            });
+            saveDB(db);
+            closeModal();
+            renderAll();
+          });
+        }
+      );
+    }
+
     function renderAll() {
       const rows = db.schedules
         .slice()
@@ -447,13 +511,19 @@ const ScheduleModule = (function () {
         calendarHtml() +
         '<div class="section-heading">' +
           '<div><h2>' + escapeHtml(heading) + '</h2><div class="sub">Klik tanggal di kalender untuk melihat/menambah jadwal brand pada hari itu</div></div>' +
+          '<div style="display:flex; gap:8px; flex-wrap:wrap;">' +
+          (canEdit && selectedDate && rows.length >= 2 ? '<button class="btn btn-ghost btn-sm" style="width:auto;" id="combineInvoiceBtn">Gabungkan Jadi 1 Invoice</button>' : "") +
           (canEdit ? '<button class="btn btn-sm" style="width:auto;" id="addScheduleBtn">+ Tambah Jadwal</button>' : "") +
+          "</div>" +
         "</div>" +
         cardsHtml +
         (canEdit ? "" : '<div class="readonly-banner" style="margin-top:18px;">Akun Anda bersifat lihat-saja. Hubungi Administrator untuk menambah atau mengubah jadwal.</div>');
 
       const addBtn = container.querySelector("#addScheduleBtn");
       if (addBtn) addBtn.addEventListener("click", function () { openForm(null, selectedDate); });
+
+      const combineBtn = container.querySelector("#combineInvoiceBtn");
+      if (combineBtn) combineBtn.addEventListener("click", function () { openCombineForm(rows); });
 
       container.querySelector("#calPrevBtn").addEventListener("click", function () {
         viewMonth--;

@@ -83,6 +83,7 @@ function migrateDB(db) {
     if (inv.dpPercent === undefined) inv.dpPercent = 50;
     if (!inv.invoiceKind) inv.invoiceKind = "manual";
     if (inv.scheduleId === undefined) inv.scheduleId = null;
+    if (inv.scheduleIds === undefined) inv.scheduleIds = [];
   });
   db.schedules.forEach(function (s) {
     // Data lama menyimpan menu sebagai satu string bebas ("menu"); versi
@@ -100,6 +101,7 @@ function migrateDB(db) {
     if (s.location === undefined) s.location = "";
     if (s.invoiceId === undefined) s.invoiceId = null;
     if (s.pelunasanInvoiceId === undefined) s.pelunasanInvoiceId = null;
+    if (s.combinedInvoiceId === undefined) s.combinedInvoiceId = null;
   });
   return db;
 }
@@ -175,7 +177,62 @@ function createAutoInvoiceFromSchedule(db, schedule, kind) {
   return inv.id;
 }
 
+function refreshCombinedInvoiceItems(db, invoiceId) {
+  const inv = db.invoices.find(function (i) { return i.id === invoiceId; });
+  if (!inv || inv.status === "paid") return;
+  const members = db.schedules.filter(function (s) { return s.combinedInvoiceId === invoiceId; });
+  if (!members.length) return;
+  const items = [];
+  members.forEach(function (s) {
+    (s.menuItems || []).forEach(function (mi) {
+      items.push({ desc: "[" + brandName(s.brand) + "] " + mi.name, qty: Number(mi.qty) || 1, price: pricelistPriceFor(mi.name) });
+    });
+  });
+  inv.items = items;
+}
+
+function createCombinedInvoiceFromSchedules(db, schedules, overrides) {
+  overrides = overrides || {};
+  const items = [];
+  schedules.forEach(function (s) {
+    (s.menuItems || []).forEach(function (mi) {
+      items.push({ desc: "[" + brandName(s.brand) + "] " + mi.name, qty: Number(mi.qty) || 1, price: pricelistPriceFor(mi.name) });
+    });
+    // Hapus invoice otomatis per-brand yang lama (kalau belum lunas) supaya
+    // client tidak menerima invoice ganda untuk jadwal yang sama.
+    [s.invoiceId, s.pelunasanInvoiceId].forEach(function (id) {
+      if (!id) return;
+      const idx = db.invoices.findIndex(function (i) { return i.id === id; });
+      if (idx !== -1 && db.invoices[idx].status !== "paid") db.invoices.splice(idx, 1);
+    });
+    s.invoiceId = null;
+    s.pelunasanInvoiceId = null;
+  });
+
+  const inv = {
+    id: uid("inv"),
+    number: generateInvoiceNumber(db),
+    status: "unpaid",
+    date: overrides.date || schedules[0].date,
+    client: overrides.client || schedules[0].client,
+    clientPhone: "",
+    clientVenue: overrides.clientVenue || schedules[0].location || "",
+    dpPercent: overrides.dpPercent !== undefined ? overrides.dpPercent : 50,
+    items: items,
+    scheduleId: null,
+    scheduleIds: schedules.map(function (s) { return s.id; }),
+    invoiceKind: "combined",
+  };
+  db.invoices.push(inv);
+  schedules.forEach(function (s) { s.combinedInvoiceId = inv.id; });
+  return inv.id;
+}
+
 function syncInvoiceFromSchedule(db, schedule) {
+  if (schedule.combinedInvoiceId) {
+    refreshCombinedInvoiceItems(db, schedule.combinedInvoiceId);
+    return;
+  }
   if (!schedule.menuItems || !schedule.menuItems.length) return;
 
   function refreshIfUnpaid(id) {

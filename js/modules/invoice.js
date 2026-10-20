@@ -22,6 +22,7 @@ const InvoiceModule = (function () {
       if (inv.invoiceKind === "dp") return '<span class="pill pill-blue">Auto · DP 50%</span>';
       if (inv.invoiceKind === "pelunasan") return '<span class="pill pill-blue">Auto · Pelunasan</span>';
       if (inv.invoiceKind === "full") return '<span class="pill pill-blue">Auto · Dari Jadwal</span>';
+      if (inv.invoiceKind === "combined") return '<span class="pill pill-blue">Auto · Gabungan Brand</span>';
       return "";
     }
 
